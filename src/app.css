@@ -786,6 +786,8 @@ html[data-glass='solid'] body.theme-light {
    option raised on a lighter pill. */
 .segmented {
 	display: inline-flex;
+	flex-wrap: wrap;
+	max-width: 100%;
 	gap: 2px;
 	padding: 3px;
 	border-radius: 10px;
@@ -800,6 +802,7 @@ html[data-glass='solid'] body.theme-light {
 	border-radius: 7px;
 	font-family: inherit;
 	font-size: 0.8rem;
+	white-space: nowrap;
 	color: var(--text-dim);
 	transition: background 0.15s, color 0.15s;
 }

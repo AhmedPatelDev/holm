@@ -16,6 +16,9 @@
 	const STYLES = ['constellation', 'dust', 'starfield'];
 	const enabled = $derived($prefs.particlesEnabled === true);
 	const preset = $derived(STYLES.includes($prefs.particlesStyle) ? $prefs.particlesStyle : 'constellation');
+	// On by default; the switch turns hover/click reactions off without
+	// removing the canvas.
+	const interactive = $derived($prefs.particlesInteractive !== false);
 
 	// Fallbacks in case a token is missing (custom branding builds, first
 	// frame before the theme class lands).
@@ -64,19 +67,30 @@
 		return { accent, foreground };
 	}
 
-	function buildOptions(style, accent, foreground) {
+	function buildOptions(style, accent, foreground, interactive) {
 		const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 		const speed = reduced ? 0 : undefined;
+		// The canvas sits behind the page and ignores pointer events, so the
+		// engine watches the window instead: the dashboard's cards and buttons
+		// still take every click, while particles react across the viewport.
+		const hoverMode = style === 'constellation' ? 'grab' : style === 'dust' ? 'bubble' : 'repulse';
 		const shared = {
 			fullScreen: { enable: false },
 			detectRetina: true,
 			fpsLimit: 60,
 			background: { color: 'transparent' },
 			interactivity: {
+				detectsOn: 'window',
 				events: {
-					onHover: { enable: false },
-					onClick: { enable: false },
+					onHover: { enable: interactive, mode: hoverMode },
+					onClick: { enable: interactive, mode: 'push' },
 					resize: { enable: true }
+				},
+				modes: {
+					grab: { distance: 160, links: { opacity: 0.4, color: accent } },
+					bubble: { distance: 140, duration: 2, size: 3.2, opacity: 0.45 },
+					repulse: { distance: 110, duration: 0.4, speed: 1 },
+					push: { quantity: 3 }
 				}
 			}
 		};
@@ -141,8 +155,9 @@
 		if (!browser || !engineReady || !enabled) return;
 		theme;
 		preset;
+		interactive;
 		const { accent, foreground } = palette();
-		options = buildOptions(preset, accent, foreground);
+		options = buildOptions(preset, accent, foreground, interactive);
 	});
 </script>
 

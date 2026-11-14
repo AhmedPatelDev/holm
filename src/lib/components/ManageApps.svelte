@@ -21,7 +21,9 @@
 	// The version is Holm's whatever the branding says, and links to its repo.
 	// A newer release, when update_check found one and lets this user see it.
 	const update = siteConfig?.update || null;
-	const REPO_URL = 'https://github.com/man15h/holm';
+	// Injected by vite.config.js from package.json's repository.url, so a
+	// fork's version link points at the fork.
+	const REPO_URL = __HOLM_REPO_URL__;
 	// Off when database.enabled is false: credentials would have nowhere to live.
 	const integrationsEnabled = siteConfig?.integrations?.enabled !== false;
 	const { apps: catalogApps } = buildAppsFromConfig(siteConfig?.apps);
@@ -40,6 +42,7 @@
 	let containerWidth = $state($prefs.containerWidth || 'wide');
 	let textScale = $state($prefs.textScale ?? 100);
 	let particlesEnabled = $state($prefs.particlesEnabled === true);
+	let particlesInteractive = $state($prefs.particlesInteractive !== false);
 	let wallpaperPage = $state(0);
 	let enabledWidgets = $state(new Set($prefs.enabledWidgets || ['weather', 'search']));
 	const WALLPAPERS_PER_PAGE = 12;
@@ -59,6 +62,7 @@
 		containerWidth = $prefs.containerWidth || 'wide';
 		textScale = $prefs.textScale ?? 100;
 		particlesEnabled = $prefs.particlesEnabled === true;
+		particlesInteractive = $prefs.particlesInteractive !== false;
 		wallpaperPage = wallpaperId ? Math.floor((wallpaperId - 1) / WALLPAPERS_PER_PAGE) : 0;
 		enabledWidgets = new Set($prefs.enabledWidgets || ['weather', 'search']);
 		healthDots = $prefs.healthDots !== false;
@@ -149,6 +153,11 @@
 		prefs.update(p => ({ ...p, particlesEnabled }));
 	}
 
+	function toggleParticlesInteractive() {
+		particlesInteractive = !particlesInteractive;
+		prefs.update(p => ({ ...p, particlesInteractive }));
+	}
+
 	// App status is on unless switched off, so it has its own pref rather than
 	// a place in enabledWidgets (which lists what's on).
 	let healthDots = $state($prefs.healthDots !== false);
@@ -208,7 +217,7 @@
 
 	// Reset is appearance-only: bookmarks (customApps) and the tile layout are
 	// left alone. The button offers Undo for a few seconds afterwards.
-	const RESET_KEYS = ['visibleApps', 'iconStyle', 'theme', 'glass', 'wallpaperEnabled', 'wallpaperId', 'openInNewTab', 'cardSize', 'containerWidth', 'textScale', 'particlesEnabled', 'particlesStyle'];
+	const RESET_KEYS = ['visibleApps', 'iconStyle', 'theme', 'glass', 'wallpaperEnabled', 'wallpaperId', 'openInNewTab', 'cardSize', 'containerWidth', 'textScale', 'particlesEnabled', 'particlesStyle', 'particlesInteractive'];
 	let resetUndo = $state(null);
 	let resetUndoTimer;
 
@@ -216,7 +225,7 @@
 		resetUndo = Object.fromEntries(RESET_KEYS.map((k) => [k, $prefs[k]]));
 		clearTimeout(resetUndoTimer);
 		resetUndoTimer = setTimeout(() => (resetUndo = null), 8000);
-		prefs.update(p => ({ ...p, visibleApps: null, iconStyle: 'colored', theme: 'auto', glass: 'frosted', wallpaperEnabled: true, wallpaperId: null, openInNewTab: false, cardSize: DEFAULT_CARD_SIZE, containerWidth: 'wide', textScale: 100, particlesEnabled: false, particlesStyle: 'constellation' }));
+		prefs.update(p => ({ ...p, visibleApps: null, iconStyle: 'colored', theme: 'auto', glass: 'frosted', wallpaperEnabled: true, wallpaperId: null, openInNewTab: false, cardSize: DEFAULT_CARD_SIZE, containerWidth: 'wide', textScale: 100, particlesEnabled: false, particlesStyle: 'constellation', particlesInteractive: true }));
 		loadFromPrefs();
 	}
 
@@ -285,7 +294,7 @@
 		class="fixed inset-0 modal-veil flex items-center justify-center z-[100] p-4"
 	>
 		<div
-			class="glass-card rounded-2xl w-full max-w-[620px] h-[520px] max-md:max-w-full max-md:h-[75vh] max-md:rounded-xl overflow-hidden animate-modal-enter shadow-theme relative flex flex-col"
+			class="configure-card glass-card rounded-2xl w-full max-md:rounded-xl overflow-hidden animate-modal-enter shadow-theme relative flex flex-col"
 		>
 			<!-- Header strip -->
 			<div class="shrink-0 flex items-center justify-between px-4 py-3 border-b border-border-card">
@@ -349,7 +358,7 @@
 				</div>
 
 				<!-- Tab content -->
-				<div class="flex-1 max-md:border-l-0 border-l border-border-card px-5 max-md:px-4 pt-3 pb-4 overflow-y-auto">
+				<div class="flex-1 min-h-0 min-w-0 max-md:border-l-0 border-l border-border-card px-5 max-md:px-4 pt-3 pb-4 overflow-y-auto">
 
 				{#if activeTab === 'appearance'}
 				<!-- ═══ APPEARANCE TAB ═══ -->
@@ -478,7 +487,24 @@
 					</div>
 					{#if particlesEnabled}
 						<div class="mt-2">
-							<UnitPicker key="particlesStyle" label="Style" options={particleStyles} fallback="constellation" inline />
+							<UnitPicker key="particlesStyle" label="Style" options={particleStyles} fallback="constellation" />
+						</div>
+						<div class="flex items-center justify-between gap-3 mt-3">
+							<div>
+								<span class="text-[0.8rem] text-content-muted">Interactive</span>
+								<div class="text-[0.68rem] text-content-dim">Follow the pointer and react to clicks.</div>
+							</div>
+							<button
+								class="bg-transparent border-none cursor-pointer p-0"
+								role="switch"
+								aria-checked={particlesInteractive}
+								aria-label="Interactive particles"
+								onclick={toggleParticlesInteractive}
+							>
+								<div class="w-9 h-5 rounded-full transition-colors duration-200 relative shrink-0 {particlesInteractive ? 'bg-surface-toggle-on' : 'bg-surface-toggle-off'}">
+									<div class="absolute top-0.5 w-4 h-4 rounded-full bg-surface-toggle-knob shadow transition-transform duration-200 {particlesInteractive ? 'translate-x-4' : 'translate-x-0.5'}"></div>
+								</div>
+							</button>
 						</div>
 					{/if}
 				</div>
@@ -651,6 +677,27 @@
 {/if}
 
 <style>
+	/* Roomy enough for the swatch grid, sliders and particle settings, while
+	   staying inside the viewport on a laptop or a phone. */
+	.configure-card {
+		max-width: 920px;
+		height: 85vh;
+		max-height: 860px;
+		min-height: 600px;
+	}
+	@media (max-width: 767px) {
+		.configure-card {
+			max-width: 100%;
+			height: 86dvh;
+			max-height: none;
+			min-height: 0;
+		}
+	}
+	@media (min-width: 768px) and (max-height: 680px) {
+		.configure-card {
+			min-height: 0;
+		}
+	}
 	/* Eight themes, so a segmented row would overflow: a compact swatch grid
 	   keeps every palette one click away. */
 	.theme-grid {
