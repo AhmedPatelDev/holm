@@ -1,6 +1,5 @@
 <script>
 	import { prefs } from '$lib/stores/prefs.js';
-	import Header from '$lib/components/Header.svelte';
 	import Dashboard from '$lib/components/Dashboard.svelte';
 
 	import Footer from '$lib/components/Footer.svelte';
@@ -109,6 +108,19 @@
 	// browser downloads the wrong background before hydration swaps it.
 	const viewPrefs = $derived(browser ? $prefs : data.prefs || {});
 	const theme = $derived(viewPrefs.theme || 'auto');
+
+	// How wide the dashboard column runs. Standard keeps the old centred
+	// 1200px measure, Wide is the default and fills a laptop or widescreen
+	// display, and Full gives the grids the whole viewport. Phones use the
+	// same narrow outer padding in every mode.
+	const CONTAINER_WIDTHS = {
+		standard: 'max-w-[1200px] px-16 max-lg:px-12',
+		wide: 'max-w-[1600px] px-10 max-lg:px-8',
+		full: 'max-w-none px-7 max-lg:px-6'
+	};
+	const containerClass = $derived(
+		CONTAINER_WIDTHS[viewPrefs.containerWidth] || CONTAINER_WIDTHS.wide
+	);
 	$effect(() => {
 		if (!browser) return;
 		document.body.classList.remove('theme-light', 'theme-dark');
@@ -201,26 +213,13 @@
 		<WallpaperBackground wallpaperId={viewPrefs.wallpaperId || null} />
 	{/if}
 <DynamicFavicon />
-	<div class="w-full max-w-[1200px] min-h-dvh flex flex-col px-16 pb-6 pt-[calc(1.5rem+env(safe-area-inset-top,0px))] max-lg:px-12 max-md:px-5 {footerEnabled ? 'max-md:pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))]' : 'max-md:pb-[calc(4.75rem+env(safe-area-inset-bottom,0px))]'} max-md:pt-[calc(1.5rem+env(safe-area-inset-top,0px))] max-md:max-w-full max-xs:px-4 max-xs:pt-[calc(1.25rem+env(safe-area-inset-top,0px))] {viewPrefs.iconStyle === 'grayed' ? 'grayed-widgets' : ''} {wallpapersEnabled && theme === 'auto' && viewPrefs.wallpaperEnabled !== false ? 'wallpaper-active' : ''}">
+	<div class="w-full {containerClass} min-h-dvh flex flex-col pb-6 pt-[calc(1.5rem+env(safe-area-inset-top,0px))] max-md:px-5 {footerEnabled ? 'max-md:pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))]' : 'max-md:pb-[calc(4.75rem+env(safe-area-inset-bottom,0px))]'} max-md:pt-[calc(1.5rem+env(safe-area-inset-top,0px))] max-md:max-w-full max-xs:px-4 max-xs:pt-[calc(1.25rem+env(safe-area-inset-top,0px))] {viewPrefs.iconStyle === 'grayed' ? 'grayed-widgets' : ''} {wallpapersEnabled && theme === 'auto' && viewPrefs.wallpaperEnabled !== false ? 'wallpaper-active' : ''}">
 		<!-- Phones: the footer's line sits level with the floating account
 		     button; with no footer, the bottom padding keeps the last apps
 		     clear of it (12px + 50px button + a gap). -->
-		<!-- Fixed top offset rather than vertical centring: centring would move
-		     the search bar whenever the content grows, e.g. entering edit mode.
-		     The flex-1 spacer below pushes the footer to the viewport bottom. -->
-		<div class="shrink-0 h-[12vh] max-md:hidden"></div>
-		<!-- Phones: share the free height with the spacer above the footer, so
-		     the clock and search come down within a thumb's reach. Capped so the
-		     header starts no lower than a quarter of the screen; a full grid
-		     leaves no free height and this collapses to nothing. -->
-		<div class="hidden max-md:block flex-1 max-h-[calc(25dvh-1.5rem-env(safe-area-inset-top,0px))]"></div>
 		<!-- Fill mode backwards, not both: a filled opacity animation keeps the
 		     wrapper a backdrop root, and the weather menu's glass inside it
 		     would stop blurring the search bar below. -->
-		<div class="dashboard-header-wrap animate-fade-in [animation-fill-mode:backwards]">
-			<Header lat={$prefs.lat} lon={$prefs.lon} placeName={$prefs.locationSource === 'manual' ? $prefs.locationName : ''} locationSource={$prefs.locationSource} showWeather={weatherEnabled} />
-
-		</div>
 		<div class="launcher-host opacity-0 animate-fade-in-up [animation-fill-mode:both] [animation-delay:75ms] relative z-20">
 			<Dashboard
 				bind:guideApp
@@ -230,6 +229,11 @@
 				onSettingsOpen={() => (manageAppsOpen = true)}
 				initialBookmarks={data.bookmarks}
 				initialCategories={data.bookmarkCategories}
+				lat={$prefs.lat}
+				lon={$prefs.lon}
+				placeName={$prefs.locationSource === 'manual' ? $prefs.locationName : ''}
+				locationSource={$prefs.locationSource}
+				showWeather={weatherEnabled}
 			/>
 		</div>
 		<!-- Inline help tips disabled for now — revisit once the palette

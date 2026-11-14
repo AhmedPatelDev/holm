@@ -195,7 +195,7 @@
 	});
 
 	const iconStyle = $derived($prefs.iconStyle || 'colored');
-	const openInNewTab = $derived($prefs.openInNewTab ?? true);
+	const openInNewTab = $derived($prefs.openInNewTab ?? false);
 
 	// Recently-opened apps tracking (lifted unchanged from AppGrid).
 	function recordAppOpen(appId) {

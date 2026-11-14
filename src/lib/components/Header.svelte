@@ -11,7 +11,18 @@
 	// lat/lon are the user's chosen location (device or a searched place);
 	// without one, the weather pill offers to set it. placeName is set for a
 	// searched place, which needs no reverse lookup.
-	let { lat, lon, placeName = '', locationSource = null, showWeather = true } = $props();
+	// search is a snippet supplied by the dashboard: the unified search bar
+	// sits in the centre column so the clock, search and weather share one
+	// top row. showSearch is false when the user turned the search widget off.
+	let {
+		lat,
+		lon,
+		placeName = '',
+		locationSource = null,
+		showWeather = true,
+		showSearch = false,
+		search = null
+	} = $props();
 
 	let weatherData = $state(null);
 	let weatherLoaded = $state(false);
@@ -65,11 +76,11 @@
 	});
 </script>
 
-<!-- Compact status-bar header: a single mono row with time · date on the
-     left and weather/location on the right. Clock is the anchor but no
-     longer the visual hero — the search palette below is. -->
-<div class="dashboard-header mb-8 max-md:mb-6 flex justify-between items-center max-md:items-start gap-3 text-[0.85rem] max-md:text-[0.75rem] font-mono tracking-[0.12em] uppercase">
-	<div class="flex flex-col gap-1 min-w-0">
+<!-- Top status row: clock and next event on the left, the unified search in
+     the centre, and weather on the right. Desktop keeps them on one baseline;
+     phones put clock + weather on one row and the search beneath. -->
+<div class="dashboard-topbar text-[0.85rem] max-md:text-[0.75rem] font-mono tracking-[0.12em] uppercase" class:has-search={showSearch && search}>
+	<div class="dashboard-header header-left">
 		<div class="relative self-start" bind:this={clockEl}>
 			<button
 				type="button"
@@ -94,12 +105,65 @@
 		</div>
 		<Upcoming />
 	</div>
-	<div class="flex items-center gap-3 shrink-0">
+	{#if showSearch && search}
+		<div class="header-center">
+			{@render search()}
+		</div>
+	{/if}
+	<div class="dashboard-header header-right">
 		{#if showWeather}<Weather {weatherData} {weatherLoaded} {locationName} hasLocation={!!(lat && lon)} source={locationSource === 'manual' ? 'manual' : 'device'} />{/if}
 	</div>
 </div>
 
 <style>
+	/* One row on desktop; the search takes the middle and can flex. Without
+	   search, left and right simply push apart. */
+	.dashboard-topbar {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1.25rem;
+		margin-bottom: 2rem;
+	}
+	.dashboard-topbar.has-search {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) minmax(15rem, 2.2fr) minmax(0, 1fr);
+		align-items: center;
+		gap: 1.5rem;
+	}
+	.header-left {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+		min-width: 0;
+	}
+	.header-center {
+		min-width: 0;
+		width: 100%;
+	}
+	.header-right {
+		display: flex;
+		align-items: center;
+		justify-content: flex-end;
+		min-width: 0;
+	}
+	@media (max-width: 767px) {
+		.dashboard-topbar {
+			margin-bottom: 1.5rem;
+		}
+		.dashboard-topbar.has-search {
+			grid-template-columns: minmax(0, 1fr) auto;
+			grid-template-areas:
+				'left right'
+				'center center';
+			align-items: start;
+			gap: 0.85rem;
+		}
+		.header-left { grid-area: left; }
+		.header-right { grid-area: right; }
+		.header-center { grid-area: center; }
+	}
+
 	/* AM/PM rides beside the digits, small, so the time still leads. */
 	.clock-period {
 		margin-left: 0.3em;

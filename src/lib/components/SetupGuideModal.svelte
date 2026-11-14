@@ -14,7 +14,7 @@
 		guide,
 		iconStyle,
 		dismissible = false,
-		openInNewTab = true,
+		openInNewTab = false,
 		dismissed = false,
 		ondismiss = () => {},
 		onopenapp = () => {},

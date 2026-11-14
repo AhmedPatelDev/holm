@@ -342,7 +342,7 @@
 	// Everything the list shows is built here as sections of items. Each item
 	// carries its own actions; actions[0] is what Enter does, actions[1] is
 	// ⌘↵, and the ⌘K panel lists them all.
-	const openAppsInNewTab = $derived($prefs.openInNewTab ?? true);
+	const openAppsInNewTab = $derived($prefs.openInNewTab ?? false);
 
 	// Result links come from integrations (bookmarks, files), so only follow
 	// http(s): a stored `javascript:` link would otherwise run as Holm.

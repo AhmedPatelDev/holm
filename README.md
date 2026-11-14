@@ -13,6 +13,8 @@
 - Adds a two-tab dashboard: personal **Bookmarks** and a group-filtered **Portal**.
 - Bookmarks support add/edit/delete, reordering, categories and card sizes, stored per user in SQLite with automatic favicons.
 - Card density (compact/medium/wide) is configurable globally in Configure and per item.
+- The dashboard runs wide by default (Layout width: Standard, Wide or Full in Configure → Appearance) with the clock, unified search and weather on one top row.
+- Edit mode has an accent-coloured **Done** button and exits with `Esc`. "Open apps in new tab" defaults to off for new users.
 
 ## Container image
 

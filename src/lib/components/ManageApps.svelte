@@ -35,8 +35,9 @@
 	let theme = $state($prefs.theme || 'auto');
 	let wallpaperEnabled = $state($prefs.wallpaperEnabled !== false);
 	let wallpaperId = $state($prefs.wallpaperId || null);
-	let openInNewTab = $state($prefs.openInNewTab ?? true);
+	let openInNewTab = $state($prefs.openInNewTab ?? false);
 	let cardSize = $state($prefs.cardSize || DEFAULT_CARD_SIZE);
+	let containerWidth = $state($prefs.containerWidth || 'wide');
 	let wallpaperPage = $state(0);
 	let enabledWidgets = $state(new Set($prefs.enabledWidgets || ['weather', 'search']));
 	const WALLPAPERS_PER_PAGE = 12;
@@ -51,8 +52,9 @@
 		theme = $prefs.theme || 'auto';
 		wallpaperEnabled = $prefs.wallpaperEnabled !== false;
 		wallpaperId = $prefs.wallpaperId || null;
-		openInNewTab = $prefs.openInNewTab ?? true;
+		openInNewTab = $prefs.openInNewTab ?? false;
 		cardSize = $prefs.cardSize || DEFAULT_CARD_SIZE;
+		containerWidth = $prefs.containerWidth || 'wide';
 		wallpaperPage = wallpaperId ? Math.floor((wallpaperId - 1) / WALLPAPERS_PER_PAGE) : 0;
 		enabledWidgets = new Set($prefs.enabledWidgets || ['weather', 'search']);
 		healthDots = $prefs.healthDots !== false;
@@ -125,6 +127,11 @@
 		prefs.update(p => ({ ...p, cardSize: size }));
 	}
 
+	function setContainerWidth(width) {
+		containerWidth = width;
+		prefs.update(p => ({ ...p, containerWidth: width }));
+	}
+
 	// App status is on unless switched off, so it has its own pref rather than
 	// a place in enabledWidgets (which lists what's on).
 	let healthDots = $state($prefs.healthDots !== false);
@@ -184,7 +191,7 @@
 
 	// Reset is appearance-only: bookmarks (customApps) and the tile layout are
 	// left alone. The button offers Undo for a few seconds afterwards.
-	const RESET_KEYS = ['visibleApps', 'iconStyle', 'theme', 'glass', 'wallpaperEnabled', 'wallpaperId', 'openInNewTab', 'cardSize'];
+	const RESET_KEYS = ['visibleApps', 'iconStyle', 'theme', 'glass', 'wallpaperEnabled', 'wallpaperId', 'openInNewTab', 'cardSize', 'containerWidth'];
 	let resetUndo = $state(null);
 	let resetUndoTimer;
 
@@ -192,7 +199,7 @@
 		resetUndo = Object.fromEntries(RESET_KEYS.map((k) => [k, $prefs[k]]));
 		clearTimeout(resetUndoTimer);
 		resetUndoTimer = setTimeout(() => (resetUndo = null), 8000);
-		prefs.update(p => ({ ...p, visibleApps: null, iconStyle: 'colored', theme: 'auto', glass: 'frosted', wallpaperEnabled: true, wallpaperId: null, openInNewTab: true, cardSize: DEFAULT_CARD_SIZE }));
+		prefs.update(p => ({ ...p, visibleApps: null, iconStyle: 'colored', theme: 'auto', glass: 'frosted', wallpaperEnabled: true, wallpaperId: null, openInNewTab: false, cardSize: DEFAULT_CARD_SIZE, containerWidth: 'wide' }));
 		loadFromPrefs();
 	}
 
@@ -215,6 +222,12 @@
 		{ id: 'compact', label: 'Compact' },
 		{ id: 'medium', label: 'Medium' },
 		{ id: 'wide', label: 'Wide' }
+	];
+
+	const layoutWidths = [
+		{ id: 'standard', label: 'Standard' },
+		{ id: 'wide', label: 'Wide' },
+		{ id: 'full', label: 'Full' }
 	];
 
 	const glassLevels = [
@@ -366,6 +379,22 @@
 						{/each}
 					</div>
 					<div class="text-[0.68rem] text-content-dim mt-1.5">Compact icons, standard cards, or wide cards with descriptions.</div>
+				</div>
+
+				<!-- Container width for the dashboard as a whole -->
+				<div class="mb-5">
+					<div class="text-[0.65rem] font-bold uppercase tracking-[0.2em] text-content-dim mb-2">Layout width</div>
+					<div class="segmented" role="radiogroup">
+						{#each layoutWidths as widthOption}
+							<button
+								role="radio"
+								aria-checked={containerWidth === widthOption.id}
+								class="segmented-item"
+								onclick={() => setContainerWidth(widthOption.id)}
+							>{widthOption.label}</button>
+						{/each}
+					</div>
+					<div class="text-[0.68rem] text-content-dim mt-1.5">Standard is a centred 1200px column; Wide fills widescreen displays; Full uses the whole viewport.</div>
 				</div>
 
 				<!-- Open apps in new tab -->

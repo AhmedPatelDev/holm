@@ -4,6 +4,7 @@
 	import { prefs } from '$lib/stores/prefs.js';
 	import { buildAppsFromConfig } from '$lib/apps.js';
 	import { getBrandBgStyle } from '$lib/iconHelpers.js';
+	import Header from '$lib/components/Header.svelte';
 	import SearchBar from '$lib/components/SearchBar.svelte';
 	import AppIcon from '$lib/components/AppIcon.svelte';
 	import TileContextMenu from '$lib/components/TileContextMenu.svelte';
@@ -31,7 +32,12 @@
 		customizationEnabled = false,
 		onSettingsOpen = () => {},
 		initialBookmarks = [],
-		initialCategories = []
+		initialCategories = [],
+		lat = null,
+		lon = null,
+		placeName = '',
+		locationSource = null,
+		showWeather = false
 	} = $props();
 
 	const siteConfig = getContext('config');
@@ -53,7 +59,7 @@
 
 	const cardSize = $derived(CARD_SIZES.includes($prefs.cardSize) ? $prefs.cardSize : DEFAULT_CARD_SIZE);
 	const iconStyle = $derived($prefs.iconStyle || 'colored');
-	const openInNewTab = $derived($prefs.openInNewTab ?? true);
+	const openInNewTab = $derived($prefs.openInNewTab ?? false);
 
 	function sizeOf(item) {
 		return effectiveCardSize(item?.size, cardSize);
@@ -514,37 +520,76 @@
 		if (!customizationEnabled && editMode) editMode = false;
 	});
 
+	function exitEditMode() {
+		editMode = false;
+		categoryEdit = null;
+		addingCategory = false;
+		newCategoryName = '';
+	}
+
+	// Escape leaves edit mode, as does the Done button. Open dialogs, menus
+	// and the search palette handle their own Escape first, so only act when
+	// none of them is up.
+	$effect(() => {
+		if (!browser || !editMode) return;
+		function onKey(e) {
+			if (e.key !== 'Escape' || e.defaultPrevented) return;
+			if (document.querySelector('[role="dialog"], [role="menu"], [aria-modal="true"]')) return;
+			exitEditMode();
+		}
+		window.addEventListener('keydown', onKey);
+		return () => window.removeEventListener('keydown', onKey);
+	});
+
 	if (browser && $prefs && !$prefs.dashboardTab) {
 		// First visit: start where the spec puts the eye first.
 		prefs.update((p) => (p.dashboardTab ? p : { ...p, dashboardTab: 'bookmarks' }));
 	}
 </script>
 
-<div class="hero-area">
-	{#if searchEnabled}
-		<div class="hero-slot">
+<div class="dashboard-header-wrap">
+	<Header
+		{lat}
+		{lon}
+		{placeName}
+		{locationSource}
+		{showWeather}
+		showSearch={searchEnabled}
+	>
+		{#snippet search()}
 			<SearchBar bind:query={searchInput} apps={searchApps} {onSettingsOpen} />
-		</div>
-	{/if}
+		{/snippet}
+	</Header>
 </div>
 
-<div class="tab-switcher" role="tablist" aria-label="Dashboard view">
-	<button
-		type="button"
-		role="tab"
-		aria-selected={activeTab === 'bookmarks'}
-		class="tab-pill"
-		class:is-active={activeTab === 'bookmarks'}
-		onclick={() => selectTab('bookmarks')}
-	>Bookmarks</button>
-	<button
-		type="button"
-		role="tab"
-		aria-selected={activeTab === 'portal'}
-		class="tab-pill"
-		class:is-active={activeTab === 'portal'}
-		onclick={() => selectTab('portal')}
-	>Portal</button>
+<div class="dash-toolbar">
+	<div class="tab-switcher" role="tablist" aria-label="Dashboard view">
+		<button
+			type="button"
+			role="tab"
+			aria-selected={activeTab === 'bookmarks'}
+			class="tab-pill"
+			class:is-active={activeTab === 'bookmarks'}
+			onclick={() => selectTab('bookmarks')}
+		>Bookmarks</button>
+		<button
+			type="button"
+			role="tab"
+			aria-selected={activeTab === 'portal'}
+			class="tab-pill"
+			class:is-active={activeTab === 'portal'}
+			onclick={() => selectTab('portal')}
+		>Portal</button>
+	</div>
+	{#if customizationEnabled && editMode}
+		<button
+			type="button"
+			class="done-btn"
+			onclick={exitEditMode}
+			title="Exit edit mode (Esc)"
+			aria-label="Done editing"
+		>Done</button>
+	{/if}
 </div>
 
 {#if apiError}
@@ -766,7 +811,7 @@
 {#if customizationEnabled}
 	{#if editMode}
 		<div class="edit-hint" role="status">
-			Drag cards to reorder · drop on a category to move them · Configure sets the card size
+			Drag cards to reorder · drop on a category to move them · Done or Esc finishes · Configure sets the card size
 		</div>
 	{:else}
 		<div class="surface-footer">
@@ -811,14 +856,60 @@
 />
 
 <style>
-	.hero-area {
-		padding: 1rem 0 1rem;
+	/* The tab pills sit centred under the clock/search/weather row, with the
+	   edit-mode Done control on the right so leaving edit mode is obvious. */
+	.dash-toolbar {
+		position: relative;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.75rem;
+		margin: 0 auto 1.75rem;
+		min-height: 2rem;
 	}
-	.hero-slot {
-		min-height: 3rem;
+	.dash-toolbar .tab-switcher {
+		margin: 0;
+	}
+	.done-btn {
+		position: absolute;
+		right: 0;
+		top: 50%;
+		transform: translateY(-50%);
+		font: inherit;
+		font-size: 0.72rem;
+		font-weight: 650;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		padding: 0.42rem 1.1rem;
+		border-radius: 9999px;
+		border: 1px solid transparent;
+		background: var(--accent, #f5b942);
+		color: #09090b;
+		cursor: pointer;
+		box-shadow: 0 2px 10px -2px rgba(0, 0, 0, 0.45);
+		transition: filter 150ms ease, transform 150ms ease;
+	}
+	.done-btn:hover,
+	.done-btn:focus-visible {
+		filter: brightness(1.08);
+		outline: none;
+	}
+	.done-btn:active {
+		filter: brightness(0.95);
+	}
+	@media (max-width: 767px) {
+		.dash-toolbar {
+			flex-wrap: wrap;
+			row-gap: 0.6rem;
+		}
+		.done-btn {
+			position: static;
+			transform: none;
+			order: 2;
+		}
 	}
 
-	/* Centered pill switcher below the search bar. */
+	/* Centered pill switcher below the header row. */
 	.tab-switcher {
 		display: flex;
 		justify-content: center;
@@ -1241,7 +1332,7 @@
 
 	/* The search palette dims the rest of the page; these blocks are part of
 	   the dashboard and should step back with it. */
-	:global(body.search-active) .tab-switcher,
+	:global(body.search-active) .dash-toolbar,
 	:global(body.search-active) .tab-panel,
 	:global(body.search-active) .surface-footer,
 	:global(body.search-active) .edit-hint {
