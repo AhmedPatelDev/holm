@@ -14,6 +14,7 @@
 	import UnitPicker from '$lib/components/UnitPicker.svelte';
 	import { SEARCH_ON_FOCUS, searchOnFocus } from '$lib/searchOnFocus.js';
 	import { SEARCH_TRANSPARENCY, SEARCH_HINTS, searchTransparency, searchHints } from '$lib/searchLook.js';
+	import { DEFAULT_CARD_SIZE } from '$lib/bookmarks.js';
 
 	const siteConfig = getContext('config');
 	const version = siteConfig?.version || '';
@@ -35,6 +36,7 @@
 	let wallpaperEnabled = $state($prefs.wallpaperEnabled !== false);
 	let wallpaperId = $state($prefs.wallpaperId || null);
 	let openInNewTab = $state($prefs.openInNewTab ?? true);
+	let cardSize = $state($prefs.cardSize || DEFAULT_CARD_SIZE);
 	let wallpaperPage = $state(0);
 	let enabledWidgets = $state(new Set($prefs.enabledWidgets || ['weather', 'search']));
 	const WALLPAPERS_PER_PAGE = 12;
@@ -50,6 +52,7 @@
 		wallpaperEnabled = $prefs.wallpaperEnabled !== false;
 		wallpaperId = $prefs.wallpaperId || null;
 		openInNewTab = $prefs.openInNewTab ?? true;
+		cardSize = $prefs.cardSize || DEFAULT_CARD_SIZE;
 		wallpaperPage = wallpaperId ? Math.floor((wallpaperId - 1) / WALLPAPERS_PER_PAGE) : 0;
 		enabledWidgets = new Set($prefs.enabledWidgets || ['weather', 'search']);
 		healthDots = $prefs.healthDots !== false;
@@ -117,6 +120,11 @@
 		prefs.update(p => ({ ...p, openInNewTab }));
 	}
 
+	function setCardSize(size) {
+		cardSize = size;
+		prefs.update(p => ({ ...p, cardSize: size }));
+	}
+
 	// App status is on unless switched off, so it has its own pref rather than
 	// a place in enabledWidgets (which lists what's on).
 	let healthDots = $state($prefs.healthDots !== false);
@@ -176,7 +184,7 @@
 
 	// Reset is appearance-only: bookmarks (customApps) and the tile layout are
 	// left alone. The button offers Undo for a few seconds afterwards.
-	const RESET_KEYS = ['visibleApps', 'iconStyle', 'theme', 'glass', 'wallpaperEnabled', 'wallpaperId', 'openInNewTab'];
+	const RESET_KEYS = ['visibleApps', 'iconStyle', 'theme', 'glass', 'wallpaperEnabled', 'wallpaperId', 'openInNewTab', 'cardSize'];
 	let resetUndo = $state(null);
 	let resetUndoTimer;
 
@@ -184,7 +192,7 @@
 		resetUndo = Object.fromEntries(RESET_KEYS.map((k) => [k, $prefs[k]]));
 		clearTimeout(resetUndoTimer);
 		resetUndoTimer = setTimeout(() => (resetUndo = null), 8000);
-		prefs.update(p => ({ ...p, visibleApps: null, iconStyle: 'colored', theme: 'auto', glass: 'frosted', wallpaperEnabled: true, wallpaperId: null, openInNewTab: true }));
+		prefs.update(p => ({ ...p, visibleApps: null, iconStyle: 'colored', theme: 'auto', glass: 'frosted', wallpaperEnabled: true, wallpaperId: null, openInNewTab: true, cardSize: DEFAULT_CARD_SIZE }));
 		loadFromPrefs();
 	}
 
@@ -201,6 +209,12 @@
 		{ id: 'colored', label: 'Colored' },
 		{ id: 'white', label: 'White' },
 		{ id: 'grayed', label: 'Grayed' }
+	];
+
+	const cardSizes = [
+		{ id: 'compact', label: 'Compact' },
+		{ id: 'medium', label: 'Medium' },
+		{ id: 'wide', label: 'Wide' }
 	];
 
 	const glassLevels = [
@@ -336,6 +350,22 @@
 							>{style.label}</button>
 						{/each}
 					</div>
+				</div>
+
+				<!-- Card size for Bookmarks and Portal -->
+				<div class="mb-5">
+					<div class="text-[0.65rem] font-bold uppercase tracking-[0.2em] text-content-dim mb-2">Card size</div>
+					<div class="segmented" role="radiogroup">
+						{#each cardSizes as size}
+							<button
+								role="radio"
+								aria-checked={cardSize === size.id}
+								class="segmented-item"
+								onclick={() => setCardSize(size.id)}
+							>{size.label}</button>
+						{/each}
+					</div>
+					<div class="text-[0.68rem] text-content-dim mt-1.5">Compact icons, standard cards, or wide cards with descriptions.</div>
 				</div>
 
 				<!-- Open apps in new tab -->

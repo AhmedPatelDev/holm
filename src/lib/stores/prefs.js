@@ -114,6 +114,11 @@ function createPrefsStore() {
 			_set(restored);
 		},
 
+		/** Start writing this browser's prefs up to the server. */
+		enableServerSync() {
+			serverSyncEnabled = true;
+		},
+
 		/**
 		 * Take the signed-in user's prefs from the server, which rendered them
 		 * with the page, so the dashboard renders on hydration with no

@@ -1,7 +1,7 @@
 <script>
 	import { prefs } from '$lib/stores/prefs.js';
 	import Header from '$lib/components/Header.svelte';
-	import WidgetGrid from '$lib/components/WidgetGrid.svelte';
+	import Dashboard from '$lib/components/Dashboard.svelte';
 
 	import Footer from '$lib/components/Footer.svelte';
 	import PrivacyTerms from '$lib/components/PrivacyTerms.svelte';
@@ -72,6 +72,14 @@
 			prefs.applyServerPrefs(data.prefs, { name: data.authName, username: data.authUsername });
 		} else {
 			prefs.update((p) => ({ ...p, name: data.authName, username: data.authUsername, firstLoginAt: p.firstLoginAt || new Date().toISOString() }));
+			// With auth off the one durable account is guest, so the first visit
+			// keeps this browser's choices and starts syncing them to SQLite. A
+			// new signed-in account starts empty instead: this browser may have
+			// belonged to someone else.
+			if (!authEnabled) {
+				prefs.enableServerSync();
+				prefs.update((p) => ({ ...p }));
+			}
 		}
 	}
 
@@ -214,7 +222,15 @@
 
 		</div>
 		<div class="launcher-host opacity-0 animate-fade-in-up [animation-fill-mode:both] [animation-delay:75ms] relative z-20">
-			<WidgetGrid bind:guideApp bind:editMode {searchEnabled} {customizationEnabled} onSettingsOpen={() => manageAppsOpen = true} />
+			<Dashboard
+				bind:guideApp
+				bind:editMode
+				{searchEnabled}
+				{customizationEnabled}
+				onSettingsOpen={() => (manageAppsOpen = true)}
+				initialBookmarks={data.bookmarks}
+				initialCategories={data.bookmarkCategories}
+			/>
 		</div>
 		<!-- Inline help tips disabled for now — revisit once the palette
 		     layout is settled and we decide where tips fit in. -->

@@ -10,7 +10,9 @@
 - Uses the fork image in [`docker-compose.yml`](docker-compose.yml).
 - Replaces upstream's release workflow with a simple image publisher.
 - Uses cross-platform npm scripts, so `npm run build` works on Windows too.
-- No application code changes yet.
+- Adds a two-tab dashboard: personal **Bookmarks** and a group-filtered **Portal**.
+- Bookmarks support add/edit/delete, reordering, categories and card sizes, stored per user in SQLite with automatic favicons.
+- Card density (compact/medium/wide) is configurable globally in Configure and per item.
 
 ## Container image
 
