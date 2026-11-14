@@ -9,6 +9,7 @@
 - Publishes `ghcr.io/ahmedpateldev/holm` from `main`.
 - Uses the fork image in [`docker-compose.yml`](docker-compose.yml).
 - Replaces upstream's release workflow with a simple image publisher.
+- Uses cross-platform npm scripts, so `npm run build` works on Windows too.
 - No application code changes yet.
 
 ## Container image
