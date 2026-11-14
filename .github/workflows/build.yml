@@ -5,20 +5,6 @@ name: Publish image
 on:
   push:
     branches: [main]
-    paths:
-      - 'src/**'
-      - 'static/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'svelte.config.js'
-      - 'vite.config.js'
-      - 'Dockerfile'
-      - '.dockerignore'
-      - 'config.example.yml'
-      - 'config.minimal.yml'
-      - 'config.demo.yml'
-      - 'privacy.md'
-      - '.github/workflows/build.yml'
   workflow_dispatch:
 
 permissions:
