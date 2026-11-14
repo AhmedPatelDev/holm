@@ -134,6 +134,7 @@
 
 /* Theme variables — dark is default */
 :root {
+	color-scheme: dark;
 	--bg: #09090b;
 	--text: #fafafa;
 	/* Brighter than zinc-300/400: supporting text sits on glass over a
@@ -202,6 +203,250 @@
 	--hero-search-chip-bg: rgba(255, 255, 255, 0.06);
 	--hero-search-chip-border: rgba(255, 255, 255, 0.10);
 	--tile-bg-default: rgba(255, 255, 255, 0.06);
+}
+
+/* ── Built-in colour themes ─────────────────────────────────────
+   Five extra dark palettes. Each is applied to <body> next to
+   .theme-dark, so every dark-theme behaviour (search palette, solid glass,
+   native controls, no wallpaper) carries over. Below the raw tokens, one
+   shared block re-resolves the Tailwind aliases — custom properties
+   declared on :root substitute their var()s there, so they would otherwise
+   keep the default dark values. */
+
+/* Obsidian — matte charcoal with slate borders and an amber highlight. */
+body.theme-obsidian {
+	--bg: #08080a;
+	--text: #f4f4f5;
+	--text-muted: #c7c7d1;
+	--text-dim: #9494a3;
+	--card-bg: rgba(255, 255, 255, 0.055);
+	--card-bg-strong: rgba(255, 255, 255, 0.09);
+	--card-border: rgba(148, 163, 184, 0.16);
+	--card-hover: rgba(255, 255, 255, 0.035);
+	--overlay: rgba(0, 0, 0, 0.55);
+	--overlay-strong: rgba(0, 0, 0, 0.85);
+	--modal-bg: #111115;
+	--toggle-off: rgba(255, 255, 255, 0.1);
+	--input-bg: rgba(255, 255, 255, 0.05);
+	--input-border: rgba(148, 163, 184, 0.18);
+	--pill-border: rgba(148, 163, 184, 0.28);
+	--pill-bg: rgba(148, 163, 184, 0.12);
+	--shadow: rgba(0, 0, 0, 0.45);
+	--settings-btn-bg: rgba(255, 255, 255, 0.07);
+	--divider: rgba(148, 163, 184, 0.14);
+	--surface-1-bg: rgba(255, 255, 255, 0.05);
+	--surface-2-bg: rgba(17, 17, 21, 0.72);
+	--surface-3-bg: rgba(17, 17, 21, 0.82);
+	--border-0: rgba(148, 163, 184, 0.1);
+	--border-1: rgba(148, 163, 184, 0.14);
+	--border-2: rgba(148, 163, 184, 0.18);
+	--border-3: rgba(148, 163, 184, 0.22);
+	--shadow-inset-hi: rgba(255, 255, 255, 0.06);
+	--bloom-ring: rgba(203, 213, 225, 0.28);
+	--glass-bg: rgba(255, 255, 255, 0.055);
+	--glass-menu-bg: rgba(15, 15, 18, 0.86);
+	--glass-border: rgba(148, 163, 184, 0.16);
+	--glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+	--segment-on: rgba(255, 255, 255, 0.14);
+	--accent: #d9b26f;
+	--tile-bg-default: rgba(255, 255, 255, 0.055);
+	--launcher-sel: rgba(255, 255, 255, 0.08);
+	--launcher-sel-ring: rgba(217, 178, 111, 0.4);
+}
+
+/* Amethyst — dark violet-indigo with royal purple and lavender text. */
+body.theme-amethyst {
+	--bg: #0d0914;
+	--text: #f3eefe;
+	--text-muted: #d6c9ef;
+	--text-dim: #a795c9;
+	--card-bg: rgba(168, 85, 247, 0.08);
+	--card-bg-strong: rgba(168, 85, 247, 0.14);
+	--card-border: rgba(168, 85, 247, 0.2);
+	--card-hover: rgba(168, 85, 247, 0.05);
+	--overlay: rgba(6, 3, 12, 0.6);
+	--overlay-strong: rgba(6, 3, 12, 0.88);
+	--modal-bg: #161022;
+	--toggle-off: rgba(168, 85, 247, 0.16);
+	--input-bg: rgba(168, 85, 247, 0.08);
+	--input-border: rgba(168, 85, 247, 0.22);
+	--pill-border: rgba(168, 85, 247, 0.35);
+	--pill-bg: rgba(168, 85, 247, 0.16);
+	--shadow: rgba(8, 2, 20, 0.6);
+	--settings-btn-bg: rgba(168, 85, 247, 0.1);
+	--divider: rgba(168, 85, 247, 0.16);
+	--surface-1-bg: rgba(168, 85, 247, 0.07);
+	--surface-2-bg: rgba(22, 16, 34, 0.75);
+	--surface-3-bg: rgba(22, 16, 34, 0.85);
+	--border-0: rgba(168, 85, 247, 0.12);
+	--border-1: rgba(168, 85, 247, 0.16);
+	--border-2: rgba(168, 85, 247, 0.2);
+	--border-3: rgba(168, 85, 247, 0.26);
+	--shadow-inset-hi: rgba(255, 255, 255, 0.07);
+	--bloom-ring: rgba(168, 85, 247, 0.4);
+	--glass-bg: rgba(22, 16, 34, 0.55);
+	--glass-menu-bg: rgba(22, 16, 34, 0.88);
+	--glass-border: rgba(168, 85, 247, 0.18);
+	--glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+	--segment-on: rgba(168, 85, 247, 0.24);
+	--accent: #a855f7;
+	--tile-bg-default: rgba(255, 255, 255, 0.06);
+	--launcher-sel: rgba(168, 85, 247, 0.16);
+	--launcher-sel-ring: rgba(168, 85, 247, 0.45);
+}
+
+/* OLED Velvet — true black with dark plum cards and crimson-violet light. */
+body.theme-oled {
+	--bg: #000000;
+	--text: #f5f3f7;
+	--text-muted: #cfc3d8;
+	--text-dim: #9f90ad;
+	--card-bg: rgba(192, 132, 252, 0.055);
+	--card-bg-strong: rgba(192, 132, 252, 0.1);
+	--card-border: rgba(192, 132, 252, 0.16);
+	--card-hover: rgba(192, 132, 252, 0.035);
+	--overlay: rgba(0, 0, 0, 0.7);
+	--overlay-strong: rgba(0, 0, 0, 0.92);
+	--modal-bg: #0c0810;
+	--toggle-off: rgba(192, 132, 252, 0.14);
+	--input-bg: rgba(192, 132, 252, 0.06);
+	--input-border: rgba(192, 132, 252, 0.18);
+	--pill-border: rgba(232, 121, 249, 0.32);
+	--pill-bg: rgba(192, 132, 252, 0.14);
+	--shadow: rgba(0, 0, 0, 0.7);
+	--settings-btn-bg: rgba(192, 132, 252, 0.08);
+	--divider: rgba(192, 132, 252, 0.12);
+	--surface-1-bg: rgba(192, 132, 252, 0.05);
+	--surface-2-bg: rgba(12, 8, 16, 0.8);
+	--surface-3-bg: rgba(12, 8, 16, 0.9);
+	--border-0: rgba(192, 132, 252, 0.1);
+	--border-1: rgba(192, 132, 252, 0.13);
+	--border-2: rgba(192, 132, 252, 0.17);
+	--border-3: rgba(192, 132, 252, 0.22);
+	--shadow-inset-hi: rgba(255, 255, 255, 0.05);
+	--bloom-ring: rgba(232, 121, 249, 0.4);
+	--glass-bg: rgba(12, 8, 16, 0.5);
+	--glass-menu-bg: rgba(12, 8, 16, 0.9);
+	--glass-border: rgba(192, 132, 252, 0.15);
+	--glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+	--segment-on: rgba(192, 132, 252, 0.2);
+	--accent: #c084fc;
+	--tile-bg-default: rgba(255, 255, 255, 0.05);
+	--launcher-sel: rgba(192, 132, 252, 0.14);
+	--launcher-sel-ring: rgba(232, 121, 249, 0.45);
+}
+
+/* Tokyo Night — the editor's night sky: blue and purple on ink. */
+body.theme-tokyo {
+	--bg: #1a1b26;
+	--text: #c0caf5;
+	--text-muted: #a9b1d6;
+	--text-dim: #7f87b3;
+	--card-bg: rgba(36, 40, 59, 0.72);
+	--card-bg-strong: rgba(122, 162, 247, 0.12);
+	--card-border: rgba(122, 162, 247, 0.18);
+	--card-hover: rgba(122, 162, 247, 0.05);
+	--overlay: rgba(10, 11, 18, 0.55);
+	--overlay-strong: rgba(10, 11, 18, 0.85);
+	--modal-bg: #24283b;
+	--toggle-off: rgba(122, 162, 247, 0.14);
+	--input-bg: rgba(122, 162, 247, 0.07);
+	--input-border: rgba(122, 162, 247, 0.2);
+	--pill-border: rgba(187, 154, 247, 0.35);
+	--pill-bg: rgba(122, 162, 247, 0.16);
+	--shadow: rgba(8, 9, 16, 0.55);
+	--settings-btn-bg: rgba(122, 162, 247, 0.09);
+	--divider: rgba(122, 162, 247, 0.15);
+	--surface-1-bg: rgba(122, 162, 247, 0.07);
+	--surface-2-bg: rgba(36, 40, 59, 0.78);
+	--surface-3-bg: rgba(36, 40, 59, 0.9);
+	--border-0: rgba(122, 162, 247, 0.12);
+	--border-1: rgba(122, 162, 247, 0.15);
+	--border-2: rgba(122, 162, 247, 0.19);
+	--border-3: rgba(122, 162, 247, 0.24);
+	--shadow-inset-hi: rgba(255, 255, 255, 0.06);
+	--bloom-ring: rgba(187, 154, 247, 0.4);
+	--glass-bg: rgba(36, 40, 59, 0.55);
+	--glass-menu-bg: rgba(36, 40, 59, 0.9);
+	--glass-border: rgba(122, 162, 247, 0.2);
+	--glass-highlight: inset 0 1px 0 rgba(192, 202, 245, 0.08);
+	--segment-on: rgba(122, 162, 247, 0.22);
+	--accent: #7aa2f7;
+	--tile-bg-default: rgba(255, 255, 255, 0.06);
+	--launcher-sel: rgba(122, 162, 247, 0.14);
+	--launcher-sel-ring: rgba(187, 154, 247, 0.45);
+}
+
+/* Emerald Noir — forest black with emerald light and teal-slate edges. */
+body.theme-emerald {
+	--bg: #060d0b;
+	--text: #ecfdf5;
+	--text-muted: #b9d8cc;
+	--text-dim: #84a99b;
+	--card-bg: rgba(16, 185, 129, 0.06);
+	--card-bg-strong: rgba(16, 185, 129, 0.11);
+	--card-border: rgba(45, 212, 191, 0.16);
+	--card-hover: rgba(16, 185, 129, 0.04);
+	--overlay: rgba(2, 8, 6, 0.6);
+	--overlay-strong: rgba(2, 8, 6, 0.88);
+	--modal-bg: #0d1915;
+	--toggle-off: rgba(16, 185, 129, 0.14);
+	--input-bg: rgba(16, 185, 129, 0.06);
+	--input-border: rgba(45, 212, 191, 0.18);
+	--pill-border: rgba(16, 185, 129, 0.32);
+	--pill-bg: rgba(16, 185, 129, 0.14);
+	--shadow: rgba(1, 6, 4, 0.6);
+	--settings-btn-bg: rgba(16, 185, 129, 0.09);
+	--divider: rgba(45, 212, 191, 0.12);
+	--surface-1-bg: rgba(16, 185, 129, 0.055);
+	--surface-2-bg: rgba(13, 25, 21, 0.78);
+	--surface-3-bg: rgba(13, 25, 21, 0.9);
+	--border-0: rgba(45, 212, 191, 0.1);
+	--border-1: rgba(45, 212, 191, 0.13);
+	--border-2: rgba(45, 212, 191, 0.17);
+	--border-3: rgba(45, 212, 191, 0.22);
+	--shadow-inset-hi: rgba(255, 255, 255, 0.05);
+	--bloom-ring: rgba(16, 185, 129, 0.4);
+	--glass-bg: rgba(13, 25, 21, 0.55);
+	--glass-menu-bg: rgba(13, 25, 21, 0.9);
+	--glass-border: rgba(45, 212, 191, 0.16);
+	--glass-highlight: inset 0 1px 0 rgba(236, 253, 245, 0.06);
+	--segment-on: rgba(16, 185, 129, 0.2);
+	--accent: #10b981;
+	--tile-bg-default: rgba(255, 255, 255, 0.055);
+	--launcher-sel: rgba(16, 185, 129, 0.13);
+	--launcher-sel-ring: rgba(16, 185, 129, 0.45);
+}
+
+/* The Tailwind tokens are declared on :root, so their var()s resolve there.
+   Re-declare the aliases on every new theme so utilities follow the palette
+   (the same reason .theme-light repeats them). */
+body.theme-obsidian,
+body.theme-amethyst,
+body.theme-oled,
+body.theme-tokyo,
+body.theme-emerald {
+	--toggle-on: var(--accent);
+	--color-surface: var(--bg);
+	--color-surface-card: var(--card-bg);
+	--color-surface-card-strong: var(--card-bg-strong);
+	--color-surface-card-hover: var(--card-hover);
+	--color-surface-modal: var(--modal-bg);
+	--color-surface-overlay: var(--overlay);
+	--color-surface-overlay-strong: var(--overlay-strong);
+	--color-surface-input: var(--input-bg);
+	--color-surface-pill: var(--pill-bg);
+	--color-surface-settings-btn: var(--settings-btn-bg);
+	--color-surface-toggle-on: var(--toggle-on);
+	--color-surface-toggle-off: var(--toggle-off);
+	--color-surface-toggle-knob: var(--toggle-knob);
+	--color-content: var(--text);
+	--color-content-muted: var(--text-muted);
+	--color-content-dim: var(--text-dim);
+	--color-border-card: var(--card-border);
+	--color-border-input: var(--input-border);
+	--color-border-pill: var(--pill-border);
+	--shadow-theme: 0 25px 50px -12px var(--shadow);
 }
 
 /* Auto theme, resting bar: milky frosted glass. Mostly-opaque white with
@@ -310,6 +555,17 @@ body {
 	color: var(--text);
 	overflow-x: hidden;
 	max-width: 100vw;
+}
+
+/* Native select menus (the bookmark editor's Card size) paint their option
+   list with the OS palette, which stays white behind light text. Follow the
+   page's colour scheme and give the rows the theme's surface and text. */
+select {
+	color-scheme: inherit;
+}
+select option {
+	background-color: var(--modal-bg, #141418);
+	color: var(--text, #f4f4f5);
 }
 
 /* iOS 27 draws its own blur over the top of an installed web app, and

@@ -12,6 +12,7 @@
 	import CornerStack from '$lib/components/CornerStack.svelte';
 	import Changelog from '$lib/components/Changelog.svelte';
 	import WallpaperBackground from '$lib/components/WallpaperBackground.svelte';
+	import ParticleBackground from '$lib/components/ParticleBackground.svelte';
 
 	import DynamicFavicon from '$lib/components/DynamicFavicon.svelte';
 	import InlineTip from '$lib/components/InlineTip.svelte';
@@ -121,15 +122,35 @@
 	const containerClass = $derived(
 		CONTAINER_WIDTHS[viewPrefs.containerWidth] || CONTAINER_WIDTHS.wide
 	);
+	// Built-in palettes that ride on .theme-dark; app.css has a block each.
+	const NAMED_THEMES = ['obsidian', 'amethyst', 'oled', 'tokyo', 'emerald'];
 	$effect(() => {
 		if (!browser) return;
-		document.body.classList.remove('theme-light', 'theme-dark');
+		// Dark themes share .theme-dark for every dark-theme rule; the named
+		// class below swaps the palette tokens.
+		document.body.classList.remove(
+			'theme-light',
+			'theme-dark',
+			...NAMED_THEMES.map((t) => `theme-${t}`)
+		);
 		if (theme === 'light') document.body.classList.add('theme-light');
 		else if (theme === 'dark') document.body.classList.add('theme-dark');
+		else if (NAMED_THEMES.includes(theme)) {
+			document.body.classList.add('theme-dark', `theme-${theme}`);
+		}
 	});
 	$effect(() => {
 		if (!browser) return;
 		document.documentElement.dataset.glass = viewPrefs.glass || 'frosted';
+	});
+
+	// Text size scales the root font size, so every rem-based size on the
+	// page (headers, cards, search, settings) grows or shrinks together.
+	$effect(() => {
+		if (!browser) return;
+		const scale = Number(viewPrefs.textScale);
+		document.documentElement.style.fontSize =
+			Number.isFinite(scale) && scale >= 85 && scale <= 130 ? `${scale}%` : '';
 	});
 
 
@@ -212,8 +233,9 @@
 	{#if wallpapersEnabled && theme === 'auto' && (viewPrefs.wallpaperEnabled !== false)}
 		<WallpaperBackground wallpaperId={viewPrefs.wallpaperId || null} />
 	{/if}
+	<ParticleBackground {theme} />
 <DynamicFavicon />
-	<div class="w-full {containerClass} min-h-dvh flex flex-col pb-6 pt-[calc(1.5rem+env(safe-area-inset-top,0px))] max-md:px-5 {footerEnabled ? 'max-md:pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))]' : 'max-md:pb-[calc(4.75rem+env(safe-area-inset-bottom,0px))]'} max-md:pt-[calc(1.5rem+env(safe-area-inset-top,0px))] max-md:max-w-full max-xs:px-4 max-xs:pt-[calc(1.25rem+env(safe-area-inset-top,0px))] {viewPrefs.iconStyle === 'grayed' ? 'grayed-widgets' : ''} {wallpapersEnabled && theme === 'auto' && viewPrefs.wallpaperEnabled !== false ? 'wallpaper-active' : ''}">
+	<div class="relative z-10 w-full {containerClass} min-h-dvh flex flex-col pb-6 pt-[calc(1.5rem+env(safe-area-inset-top,0px))] max-md:px-5 {footerEnabled ? 'max-md:pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))]' : 'max-md:pb-[calc(4.75rem+env(safe-area-inset-bottom,0px))]'} max-md:pt-[calc(1.5rem+env(safe-area-inset-top,0px))] max-md:max-w-full max-xs:px-4 max-xs:pt-[calc(1.25rem+env(safe-area-inset-top,0px))] {viewPrefs.iconStyle === 'grayed' ? 'grayed-widgets' : ''} {wallpapersEnabled && theme === 'auto' && viewPrefs.wallpaperEnabled !== false ? 'wallpaper-active' : ''}">
 		<!-- Phones: the footer's line sits level with the floating account
 		     button; with no footer, the bottom padding keeps the last apps
 		     clear of it (12px + 50px button + a gap). -->

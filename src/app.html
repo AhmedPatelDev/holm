@@ -19,9 +19,15 @@
 		try {
 			const p = JSON.parse(localStorage.getItem('holm_prefs'));
 			const t = p?.theme || localStorage.getItem('holm_theme');
+			const dark = ['dark', 'obsidian', 'amethyst', 'oled', 'tokyo', 'emerald'];
 			if (t === 'light') document.body.classList.add('theme-light');
-			else if (t === 'dark') document.body.classList.add('theme-dark');
+			else if (dark.includes(t)) {
+				document.body.classList.add('theme-dark');
+				if (t !== 'dark') document.body.classList.add('theme-' + t);
+			}
 			document.documentElement.dataset.glass = p?.glass || 'frosted';
+			const scale = Number(p?.textScale);
+			if (scale >= 85 && scale <= 130) document.documentElement.style.fontSize = scale + '%';
 		} catch {}
 	</script>
 	<div style="display: contents">%sveltekit.body%</div>

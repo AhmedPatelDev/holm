@@ -15,6 +15,10 @@
 - Card density (compact/medium/wide) is configurable globally in Configure and per item.
 - The dashboard runs wide by default (Layout width: Standard, Wide or Full in Configure → Appearance) with the clock, unified search and weather on one top row.
 - Edit mode has an accent-coloured **Done** button and exits with `Esc`. "Open apps in new tab" defaults to off for new users.
+- Adds five built-in dark themes — Obsidian, Amethyst, OLED Velvet, Tokyo Night and Emerald Noir — alongside Dynamic, Dark and Light, each persisted per user.
+- Optional particle background (Constellation, Floating Dust, Starfield) powered by tsParticles, tinted from the active theme and persisted per user.
+- A Text size slider in Configure → Appearance (85–130%) scales every rem-based size, persisted per user.
+- Native select menus (bookmark Card size) follow the active theme instead of the OS light palette.
 
 ## Container image
 

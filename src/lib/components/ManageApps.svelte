@@ -38,6 +38,8 @@
 	let openInNewTab = $state($prefs.openInNewTab ?? false);
 	let cardSize = $state($prefs.cardSize || DEFAULT_CARD_SIZE);
 	let containerWidth = $state($prefs.containerWidth || 'wide');
+	let textScale = $state($prefs.textScale ?? 100);
+	let particlesEnabled = $state($prefs.particlesEnabled === true);
 	let wallpaperPage = $state(0);
 	let enabledWidgets = $state(new Set($prefs.enabledWidgets || ['weather', 'search']));
 	const WALLPAPERS_PER_PAGE = 12;
@@ -55,6 +57,8 @@
 		openInNewTab = $prefs.openInNewTab ?? false;
 		cardSize = $prefs.cardSize || DEFAULT_CARD_SIZE;
 		containerWidth = $prefs.containerWidth || 'wide';
+		textScale = $prefs.textScale ?? 100;
+		particlesEnabled = $prefs.particlesEnabled === true;
 		wallpaperPage = wallpaperId ? Math.floor((wallpaperId - 1) / WALLPAPERS_PER_PAGE) : 0;
 		enabledWidgets = new Set($prefs.enabledWidgets || ['weather', 'search']);
 		healthDots = $prefs.healthDots !== false;
@@ -132,6 +136,19 @@
 		prefs.update(p => ({ ...p, containerWidth: width }));
 	}
 
+	function setTextScale(value) {
+		// The slider is 85–130 in fives; clamp anyway so a stale/hand-edited
+		// pref can't blow the page up.
+		const scale = Math.min(130, Math.max(85, Math.round(Number(value) / 5) * 5));
+		textScale = scale;
+		prefs.update(p => ({ ...p, textScale: scale }));
+	}
+
+	function toggleParticles() {
+		particlesEnabled = !particlesEnabled;
+		prefs.update(p => ({ ...p, particlesEnabled }));
+	}
+
 	// App status is on unless switched off, so it has its own pref rather than
 	// a place in enabledWidgets (which lists what's on).
 	let healthDots = $state($prefs.healthDots !== false);
@@ -191,7 +208,7 @@
 
 	// Reset is appearance-only: bookmarks (customApps) and the tile layout are
 	// left alone. The button offers Undo for a few seconds afterwards.
-	const RESET_KEYS = ['visibleApps', 'iconStyle', 'theme', 'glass', 'wallpaperEnabled', 'wallpaperId', 'openInNewTab', 'cardSize', 'containerWidth'];
+	const RESET_KEYS = ['visibleApps', 'iconStyle', 'theme', 'glass', 'wallpaperEnabled', 'wallpaperId', 'openInNewTab', 'cardSize', 'containerWidth', 'textScale', 'particlesEnabled', 'particlesStyle'];
 	let resetUndo = $state(null);
 	let resetUndoTimer;
 
@@ -199,7 +216,7 @@
 		resetUndo = Object.fromEntries(RESET_KEYS.map((k) => [k, $prefs[k]]));
 		clearTimeout(resetUndoTimer);
 		resetUndoTimer = setTimeout(() => (resetUndo = null), 8000);
-		prefs.update(p => ({ ...p, visibleApps: null, iconStyle: 'colored', theme: 'auto', glass: 'frosted', wallpaperEnabled: true, wallpaperId: null, openInNewTab: false, cardSize: DEFAULT_CARD_SIZE, containerWidth: 'wide' }));
+		prefs.update(p => ({ ...p, visibleApps: null, iconStyle: 'colored', theme: 'auto', glass: 'frosted', wallpaperEnabled: true, wallpaperId: null, openInNewTab: false, cardSize: DEFAULT_CARD_SIZE, containerWidth: 'wide', textScale: 100, particlesEnabled: false, particlesStyle: 'constellation' }));
 		loadFromPrefs();
 	}
 
@@ -237,9 +254,20 @@
 	];
 
 	const themes = [
-		{ id: 'auto', label: 'Dynamic' },
-		{ id: 'dark', label: 'Dark' },
-		{ id: 'light', label: 'Light' }
+		{ id: 'auto', label: 'Dynamic', dot: 'conic-gradient(from 210deg, #f5b942, #a855f7, #38bdf8, #f5b942)' },
+		{ id: 'dark', label: 'Dark', dot: '#3f3f46' },
+		{ id: 'light', label: 'Light', dot: '#fafafa' },
+		{ id: 'obsidian', label: 'Obsidian', dot: '#d9b26f' },
+		{ id: 'amethyst', label: 'Amethyst', dot: '#a855f7' },
+		{ id: 'oled', label: 'OLED Velvet', dot: '#c084fc' },
+		{ id: 'tokyo', label: 'Tokyo Night', dot: '#7aa2f7' },
+		{ id: 'emerald', label: 'Emerald Noir', dot: '#10b981' }
+	];
+
+	const particleStyles = [
+		{ id: 'constellation', label: 'Constellation' },
+		{ id: 'dust', label: 'Floating Dust' },
+		{ id: 'starfield', label: 'Starfield' }
 	];
 </script>
 
@@ -333,14 +361,20 @@
 				<!-- Theme -->
 				<div class="mb-5">
 					<div class="text-[0.65rem] font-bold uppercase tracking-[0.2em] text-content-dim mb-2">Theme</div>
-					<div class="segmented" role="radiogroup">
+					<div class="theme-grid" role="radiogroup" aria-label="Theme">
 						{#each themes as t}
 							<button
+								type="button"
 								role="radio"
 								aria-checked={theme === t.id}
-								class="segmented-item"
+								class="theme-option"
+								class:is-active={theme === t.id}
+								title={t.label}
 								onclick={() => setTheme(t.id)}
-							>{t.label}</button>
+							>
+								<span class="theme-dot" style={`--swatch: ${t.dot}`}></span>
+								<span class="theme-name">{t.label}</span>
+							</button>
 						{/each}
 					</div>
 				</div>
@@ -395,6 +429,58 @@
 						{/each}
 					</div>
 					<div class="text-[0.68rem] text-content-dim mt-1.5">Standard is a centred 1200px column; Wide fills widescreen displays; Full uses the whole viewport.</div>
+				</div>
+
+				<!-- Text size: scales the root font size, and with it every rem. -->
+				<div class="mb-5">
+					<div class="flex items-center justify-between mb-2">
+						<div class="text-[0.65rem] font-bold uppercase tracking-[0.2em] text-content-dim">Text size</div>
+						<button
+							type="button"
+							class="text-[0.7rem] tabular-nums text-content-muted bg-transparent border-none cursor-pointer hover:text-content"
+							onclick={() => setTextScale(100)}
+							title="Reset to 100%"
+							aria-label={`Text size ${textScale} percent, reset to 100 percent`}
+						>{textScale}%</button>
+					</div>
+					<input
+						type="range"
+						class="text-slider"
+						min="85"
+						max="130"
+						step="5"
+						value={textScale}
+						oninput={(e) => setTextScale(e.currentTarget.value)}
+						aria-label="Text size"
+					/>
+					<div class="flex justify-between text-[0.62rem] text-content-dim mt-1">
+						<span>85%</span>
+						<span>Tap the percentage to reset</span>
+						<span>130%</span>
+					</div>
+				</div>
+
+				<!-- Decorative particle background behind the dashboard. -->
+				<div class="mb-4">
+					<div class="flex items-center justify-between">
+						<span class="text-[0.8rem] text-content-muted">Particles</span>
+						<button
+							class="bg-transparent border-none cursor-pointer p-0"
+							role="switch"
+							aria-checked={particlesEnabled}
+							aria-label="Particles"
+							onclick={toggleParticles}
+						>
+							<div class="w-9 h-5 rounded-full transition-colors duration-200 relative shrink-0 {particlesEnabled ? 'bg-surface-toggle-on' : 'bg-surface-toggle-off'}">
+								<div class="absolute top-0.5 w-4 h-4 rounded-full bg-surface-toggle-knob shadow transition-transform duration-200 {particlesEnabled ? 'translate-x-4' : 'translate-x-0.5'}"></div>
+							</div>
+						</button>
+					</div>
+					{#if particlesEnabled}
+						<div class="mt-2">
+							<UnitPicker key="particlesStyle" label="Style" options={particleStyles} fallback="constellation" inline />
+						</div>
+					{/if}
 				</div>
 
 				<!-- Open apps in new tab -->
@@ -565,6 +651,59 @@
 {/if}
 
 <style>
+	/* Eight themes, so a segmented row would overflow: a compact swatch grid
+	   keeps every palette one click away. */
+	.theme-grid {
+		display: grid;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		gap: 0.35rem;
+	}
+	.theme-option {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 0.3rem;
+		min-height: 3.15rem;
+		padding: 0.4rem 0.2rem;
+		border-radius: 9px;
+		border: 1px solid var(--glass-border);
+		background: var(--input-bg);
+		color: var(--text-dim);
+		font-family: inherit;
+		font-size: 0.65rem;
+		line-height: 1.15;
+		text-align: center;
+		cursor: pointer;
+		transition: background 0.15s, color 0.15s, border-color 0.15s;
+	}
+	.theme-option:hover {
+		color: var(--text-muted);
+		border-color: var(--pill-border);
+	}
+	.theme-option.is-active {
+		background: var(--segment-on);
+		color: var(--text);
+		border-color: var(--pill-border);
+		box-shadow: var(--glass-highlight), 0 1px 3px rgba(0, 0, 0, 0.2);
+	}
+	.theme-dot {
+		width: 0.85rem;
+		height: 0.85rem;
+		border-radius: 9999px;
+		background: var(--swatch);
+		box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.45), 0 0 8px -2px var(--swatch);
+	}
+	.theme-name {
+		max-width: 100%;
+		overflow-wrap: anywhere;
+	}
+	.text-slider {
+		width: 100%;
+		margin: 0;
+		accent-color: var(--accent, #f5b942);
+		cursor: pointer;
+	}
 	.version-line {
 		display: flex;
 		flex-direction: column;
