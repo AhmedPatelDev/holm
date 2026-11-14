@@ -14,6 +14,7 @@
 	import UnitPicker from '$lib/components/UnitPicker.svelte';
 	import { SEARCH_ON_FOCUS, searchOnFocus } from '$lib/searchOnFocus.js';
 	import { SEARCH_TRANSPARENCY, SEARCH_HINTS, searchTransparency, searchHints } from '$lib/searchLook.js';
+	import { SEARCH_ENGINES, effectiveSearchEngine } from '$lib/searchEngine.js';
 	import { DEFAULT_CARD_SIZE } from '$lib/bookmarks.js';
 
 	const siteConfig = getContext('config');
@@ -38,6 +39,12 @@
 	let wallpaperEnabled = $state($prefs.wallpaperEnabled !== false);
 	let wallpaperId = $state($prefs.wallpaperId || null);
 	let openInNewTab = $state($prefs.openInNewTab ?? false);
+	let defaultLandingTab = $state($prefs.defaultLandingTab || 'last');
+	let searchEngine = $state($prefs.searchEngine || 'default');
+	let searchEngineUrl = $state($prefs.searchEngineUrl || '');
+	let searchEngineParam = $state($prefs.searchEngineParam || 'q');
+	let searchEngineName = $state($prefs.searchEngineName || '');
+	let searchEngineIcon = $state($prefs.searchEngineIcon || '');
 	let cardSize = $state($prefs.cardSize || DEFAULT_CARD_SIZE);
 	let containerWidth = $state($prefs.containerWidth || 'wide');
 	let textScale = $state($prefs.textScale ?? 100);
@@ -58,6 +65,12 @@
 		wallpaperEnabled = $prefs.wallpaperEnabled !== false;
 		wallpaperId = $prefs.wallpaperId || null;
 		openInNewTab = $prefs.openInNewTab ?? false;
+		defaultLandingTab = $prefs.defaultLandingTab || 'last';
+		searchEngine = $prefs.searchEngine || 'default';
+		searchEngineUrl = $prefs.searchEngineUrl || '';
+		searchEngineParam = $prefs.searchEngineParam || 'q';
+		searchEngineName = $prefs.searchEngineName || '';
+		searchEngineIcon = $prefs.searchEngineIcon || '';
 		cardSize = $prefs.cardSize || DEFAULT_CARD_SIZE;
 		containerWidth = $prefs.containerWidth || 'wide';
 		textScale = $prefs.textScale ?? 100;
@@ -129,6 +142,44 @@
 		openInNewTab = !openInNewTab;
 		prefs.update(p => ({ ...p, openInNewTab }));
 	}
+
+	function setDefaultLandingTab(tab) {
+		defaultLandingTab = tab;
+		prefs.update(p => ({ ...p, defaultLandingTab: tab }));
+	}
+
+	function setSearchEngine(id) {
+		searchEngine = id;
+		prefs.update(p => ({ ...p, searchEngine: id }));
+	}
+
+	// Custom engine fields save as they are typed; prefs debounces the write,
+	// so a URL typed a character at a time still lands as one update.
+	function setSearchEngineField(field, value) {
+		if (field === 'url') searchEngineUrl = value;
+		else if (field === 'param') searchEngineParam = value;
+		else if (field === 'name') searchEngineName = value;
+		else if (field === 'icon') searchEngineIcon = value;
+		prefs.update(p => ({ ...p, [`searchEngine${field[0].toUpperCase()}${field.slice(1)}`]: value }));
+	}
+
+	function resetSearchEngine() {
+		searchEngine = 'default';
+		searchEngineUrl = '';
+		searchEngineParam = 'q';
+		searchEngineName = '';
+		searchEngineIcon = '';
+		prefs.update(p => ({ ...p, searchEngine: 'default', searchEngineUrl: '', searchEngineParam: 'q', searchEngineName: '', searchEngineIcon: '' }));
+	}
+
+	// What the bar will actually use: the pick, the custom entry, or the
+	// server's search: fallback, so the summary never lies about the target.
+	const currentEngine = $derived(
+		effectiveSearchEngine(
+			{ searchEngine, searchEngineUrl, searchEngineParam, searchEngineName, searchEngineIcon },
+			siteConfig?.search
+		)
+	);
 
 	function setCardSize(size) {
 		cardSize = size;
@@ -215,9 +266,9 @@
 		prefs.update(p => ({ ...p, wallpaperId: id }));
 	}
 
-	// Reset is appearance-only: bookmarks (customApps) and the tile layout are
-	// left alone. The button offers Undo for a few seconds afterwards.
-	const RESET_KEYS = ['visibleApps', 'iconStyle', 'theme', 'glass', 'wallpaperEnabled', 'wallpaperId', 'openInNewTab', 'cardSize', 'containerWidth', 'textScale', 'particlesEnabled', 'particlesStyle', 'particlesInteractive'];
+	// Reset puts this panel back to its defaults: bookmarks (customApps) and
+	// the tile layout are left alone. The button offers Undo for a few seconds.
+	const RESET_KEYS = ['visibleApps', 'iconStyle', 'theme', 'glass', 'wallpaperEnabled', 'wallpaperId', 'openInNewTab', 'defaultLandingTab', 'searchEngine', 'searchEngineUrl', 'searchEngineParam', 'searchEngineName', 'searchEngineIcon', 'cardSize', 'containerWidth', 'textScale', 'particlesEnabled', 'particlesStyle', 'particlesInteractive'];
 	let resetUndo = $state(null);
 	let resetUndoTimer;
 
@@ -225,7 +276,7 @@
 		resetUndo = Object.fromEntries(RESET_KEYS.map((k) => [k, $prefs[k]]));
 		clearTimeout(resetUndoTimer);
 		resetUndoTimer = setTimeout(() => (resetUndo = null), 8000);
-		prefs.update(p => ({ ...p, visibleApps: null, iconStyle: 'colored', theme: 'auto', glass: 'frosted', wallpaperEnabled: true, wallpaperId: null, openInNewTab: false, cardSize: DEFAULT_CARD_SIZE, containerWidth: 'wide', textScale: 100, particlesEnabled: false, particlesStyle: 'constellation', particlesInteractive: true }));
+		prefs.update(p => ({ ...p, visibleApps: null, iconStyle: 'colored', theme: 'auto', glass: 'frosted', wallpaperEnabled: true, wallpaperId: null, openInNewTab: false, defaultLandingTab: 'last', searchEngine: 'default', searchEngineUrl: '', searchEngineParam: 'q', searchEngineName: '', searchEngineIcon: '', cardSize: DEFAULT_CARD_SIZE, containerWidth: 'wide', textScale: 100, particlesEnabled: false, particlesStyle: 'constellation', particlesInteractive: true }));
 		loadFromPrefs();
 	}
 
@@ -254,6 +305,12 @@
 		{ id: 'standard', label: 'Standard' },
 		{ id: 'wide', label: 'Wide' },
 		{ id: 'full', label: 'Full' }
+	];
+
+	const landingTabs = [
+		{ id: 'bookmarks', label: 'Bookmarks' },
+		{ id: 'portal', label: 'Portal' },
+		{ id: 'last', label: 'Last Active' }
 	];
 
 	const glassLevels = [
@@ -309,6 +366,7 @@
 			<!-- Mobile: horizontal tabs -->
 			<div class="hidden max-md:flex shrink-0 px-3 pt-2 pb-1 gap-1 border-b border-border-card overflow-x-auto items-center">
 				{#each [
+					{ id: 'general', label: 'General' },
 					{ id: 'appearance', label: 'Appearance' },
 					{ id: 'widgets', label: 'Widgets' },
 					{ id: 'integrations', label: 'Integrations' }
@@ -326,6 +384,7 @@
 				<div class="w-[160px] shrink-0 px-2.5 pt-3 pb-3 flex flex-col max-md:hidden">
 					<div class="flex flex-col gap-0.5">
 						{#each [
+							{ id: 'general', label: 'General', svg: '<path d="M4 21v-7"/><path d="M4 10V3"/><path d="M12 21v-9"/><path d="M12 8V3"/><path d="M20 21v-5"/><path d="M20 12V3"/><path d="M1 14h6"/><path d="M9 8h6"/><path d="M17 16h6"/>' },
 							{ id: 'appearance', label: 'Appearance', svg: '<circle cx="12" cy="12" r="3"/><path d="M12 1v2m0 18v-2M4.22 4.22l1.42 1.42m12.72 12.72-1.42-1.42M1 12h2m18 0h-2M4.22 19.78l1.42-1.42M18.36 5.64l-1.42 1.42"/>' },
 							{ id: 'widgets', label: 'Widgets', svg: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>' },
 							{ id: 'integrations', label: 'Integrations', svg: '<path d="M9 2v6"/><path d="M15 2v6"/><path d="M12 17v5"/><path d="M5 8h14a2 2 0 0 1 2 2v3a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5v-3a2 2 0 0 1 2-2z"/>' }
@@ -360,7 +419,127 @@
 				<!-- Tab content -->
 				<div class="flex-1 min-h-0 min-w-0 max-md:border-l-0 border-l border-border-card px-5 max-md:px-4 pt-3 pb-4 overflow-y-auto">
 
-				{#if activeTab === 'appearance'}
+				{#if activeTab === 'general'}
+				<!-- ═══ GENERAL TAB ═══ -->
+				<div class="mb-4">
+					<div class="text-[0.85rem] font-semibold text-content">General</div>
+					<div class="text-[0.7rem] text-content-dim mt-0.5">How the dashboard behaves and searches the web.</div>
+				</div>
+
+				<!-- Default landing tab -->
+				<div class="mb-5">
+					<div class="text-[0.65rem] font-bold uppercase tracking-[0.2em] text-content-dim mb-2">Default landing tab</div>
+					<div class="segmented" role="radiogroup" aria-label="Default landing tab">
+						{#each landingTabs as tab}
+							<button
+								type="button"
+								role="radio"
+								aria-checked={defaultLandingTab === tab.id}
+								class="segmented-item"
+								onclick={() => setDefaultLandingTab(tab.id)}
+							>{tab.label}</button>
+						{/each}
+					</div>
+					<div class="text-[0.68rem] text-content-dim mt-1.5">“Last Active” opens on whichever tab you used last; the others always start there.</div>
+				</div>
+
+				<!-- Open apps in new tab -->
+				<div class="mb-5">
+					<div class="flex items-center justify-between gap-3">
+						<div>
+							<span class="text-[0.8rem] text-content-muted">Open apps in new tab</span>
+							<div class="text-[0.68rem] text-content-dim">Tiles and search results open a new browser tab.</div>
+						</div>
+						<button class="bg-transparent border-none cursor-pointer p-0" role="switch" aria-checked={openInNewTab} aria-label="Open apps in new tab" onclick={toggleOpenInNewTab}>
+							<div class="w-9 h-5 rounded-full transition-colors duration-200 relative shrink-0 {openInNewTab ? 'bg-surface-toggle-on' : 'bg-surface-toggle-off'}">
+								<div class="absolute top-0.5 w-4 h-4 rounded-full bg-surface-toggle-knob shadow transition-transform duration-200 {openInNewTab ? 'translate-x-4' : 'translate-x-0.5'}"></div>
+							</div>
+						</button>
+					</div>
+				</div>
+
+				<!-- Search engine: the bar's placeholder, icon and web target. -->
+				<div class="mb-4">
+					<div class="flex items-center justify-between gap-3 mb-2">
+						<div class="text-[0.65rem] font-bold uppercase tracking-[0.2em] text-content-dim">Search engine</div>
+						{#if searchEngine !== 'default'}
+							<button
+								type="button"
+								class="text-[0.7rem] text-content-dim bg-transparent border-none cursor-pointer hover:text-content transition-colors font-mono p-0"
+								onclick={resetSearchEngine}
+							>Reset to default</button>
+						{/if}
+					</div>
+					<select
+						class="engine-select"
+						value={searchEngine}
+						onchange={(e) => setSearchEngine(e.currentTarget.value)}
+						aria-label="Search engine"
+					>
+						{#each SEARCH_ENGINES as option}
+							<option value={option.id}>{option.label}</option>
+						{/each}
+					</select>
+
+					{#if currentEngine}
+						<div class="text-[0.68rem] text-content-dim mt-2">
+							Searches go to <span class="text-content-muted">{currentEngine.name}</span>{#if currentEngine.serverDefault}{' '}(the server default){/if}, using <code class="engine-param">{currentEngine.param}</code>.
+						</div>
+					{:else}
+						<div class="text-[0.68rem] text-amber-400/90 mt-2">No search URL is configured, so web searches stay in the launcher.</div>
+					{/if}
+
+					{#if searchEngine === 'custom'}
+						<div class="engine-fields mt-3">
+							<label class="engine-field">
+								<span>Search URL</span>
+								<input
+									class="engine-input"
+									type="url"
+									inputmode="url"
+									placeholder="https://searxng.example.com/search"
+									value={searchEngineUrl}
+									oninput={(e) => setSearchEngineField('url', e.currentTarget.value)}
+								/>
+							</label>
+							<label class="engine-field">
+								<span>Query parameter</span>
+								<input
+									class="engine-input"
+									type="text"
+									placeholder="q"
+									value={searchEngineParam}
+									oninput={(e) => setSearchEngineField('param', e.currentTarget.value)}
+								/>
+							</label>
+							<div class="engine-field-row">
+								<label class="engine-field">
+									<span>Display name</span>
+									<input
+										class="engine-input"
+										type="text"
+										placeholder="SearXNG"
+										value={searchEngineName}
+										oninput={(e) => setSearchEngineField('name', e.currentTarget.value)}
+									/>
+								</label>
+								<label class="engine-field">
+									<span>Icon</span>
+									<input
+										class="engine-input"
+										type="text"
+										placeholder="si:duckduckgo or URL"
+										value={searchEngineIcon}
+										oninput={(e) => setSearchEngineField('icon', e.currentTarget.value)}
+									/>
+								</label>
+							</div>
+							<div class="text-[0.65rem] text-content-dim">Icons take a URL or a Simple Icons slug like <code class="engine-param">si:duckduckgo</code>. Leave the name and icon blank to use the host.</div>
+						</div>
+					{/if}
+				</div>
+
+				{:else if activeTab === 'appearance'}
 				<!-- ═══ APPEARANCE TAB ═══ -->
 				<div class="mb-4">
 					<div class="text-[0.85rem] font-semibold text-content">Appearance</div>
@@ -507,18 +686,6 @@
 							</button>
 						</div>
 					{/if}
-				</div>
-
-				<!-- Open apps in new tab -->
-				<div class="mb-4">
-					<div class="flex items-center justify-between">
-						<span class="text-[0.8rem] text-content-muted">Open apps in new tab</span>
-						<button class="bg-transparent border-none cursor-pointer p-0" role="switch" aria-checked={openInNewTab} aria-label="Open apps in new tab" onclick={toggleOpenInNewTab}>
-							<div class="w-9 h-5 rounded-full transition-colors duration-200 relative shrink-0 {openInNewTab ? 'bg-surface-toggle-on' : 'bg-surface-toggle-off'}">
-								<div class="absolute top-0.5 w-4 h-4 rounded-full bg-surface-toggle-knob shadow transition-transform duration-200 {openInNewTab ? 'translate-x-4' : 'translate-x-0.5'}"></div>
-							</div>
-						</button>
-					</div>
 				</div>
 
 				<!-- Wallpaper — visible in all themes, disabled when not Dynamic -->

@@ -43,6 +43,13 @@
 	const siteConfig = getContext('config');
 
 	// ── Tabs ────────────────────────────────────────────────────────────────
+	// General → Default landing tab can pin the page to one tab; otherwise it
+	// opens on whichever tab was last active.
+	const landingTab = $derived(
+		$prefs.defaultLandingTab === 'bookmarks' || $prefs.defaultLandingTab === 'portal'
+			? $prefs.defaultLandingTab
+			: null
+	);
 	let activeTab = $state('bookmarks');
 
 	function selectTab(tab) {
@@ -52,9 +59,17 @@
 
 	// Server prefs arrive after hydration; follow them unless the user has
 	// already clicked (in which case the click wrote the same value back).
+	// Clicking stays free while a landing tab is pinned, because that effect
+	// only re-runs when the pref itself changes.
 	$effect(() => {
+		const fixed = landingTab;
+		if (!fixed) return;
+		if (untrack(() => activeTab) !== fixed) activeTab = fixed;
+	});
+	$effect(() => {
+		if (landingTab) return;
 		const saved = $prefs.dashboardTab;
-		if ((saved === 'bookmarks' || saved === 'portal') && saved !== activeTab) activeTab = saved;
+		if ((saved === 'bookmarks' || saved === 'portal') && untrack(() => activeTab) !== saved) activeTab = saved;
 	});
 
 	const cardSize = $derived(CARD_SIZES.includes($prefs.cardSize) ? $prefs.cardSize : DEFAULT_CARD_SIZE);

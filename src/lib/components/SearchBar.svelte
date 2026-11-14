@@ -17,9 +17,13 @@
 	import { searchOnFocus } from '$lib/searchOnFocus.js';
 	import { oneAtATime, progressOf, setTask } from '$lib/checklist.js';
 	import { searchTransparency, searchGlassLevel, searchHints } from '$lib/searchLook.js';
+	import { effectiveSearchEngine, buildSearchUrl } from '$lib/searchEngine.js';
 
 	const siteConfig = getContext('config');
 	const searchConfig = siteConfig?.search || { enabled: true, url: 'https://www.google.com/search', param: 'q' };
+	// The person's pick from Configure → General, or the server's search:
+	// entry. Both the placeholder/icon and the web fallback read this.
+	const engine = $derived(effectiveSearchEngine($prefs, searchConfig));
 
 	let { query = $bindable(''), apps = [], onSettingsOpen = () => {} } = $props();
 	let inputEl;
@@ -221,24 +225,48 @@
 	// two renders agree.
 	let macKeys = $state(true);
 	onMount(() => { macKeys = isMac; });
-	const FIRST_HINT = 'Search apps, files, photos…';
+	const DEFAULT_HINT = 'Search apps, files, photos…';
+	// The web engine leads: it is what Enter runs when no app or result
+	// matches, so the bar should say whose results those are.
+	const engineHint = $derived(engine ? `Search ${engine.name} or filter apps…` : DEFAULT_HINT);
 	const PLACEHOLDER_HINTS = $derived([
-		FIRST_HINT,
+		engineHint,
 		...(scopeHint ? [scopeHint] : []),
 		'Type a command, like “dark” or “wallpaper”',
 		'Do quick maths, like “12 * 7” or “5 km in mi”',
 		`Press / or ${isMac ? '⌘K' : 'Ctrl K'} anywhere to search`
 	]);
-	let placeholderText = $state(FIRST_HINT);
+	let placeholderText = $state(DEFAULT_HINT);
 
 	$effect(() => {
 		if (typeof document === 'undefined') return;
+		const hint = engineHint;
 		if (!hintsRotate) {
-			placeholderText = FIRST_HINT;
+			placeholderText = hint;
 			return;
 		}
 		if (inlineOpen || query || activeScope) return;
 		return cycleHints(PLACEHOLDER_HINTS, (text) => (placeholderText = text), () => prefersReducedMotion.current);
+	});
+
+	// The engine's mark, drawn as a mask so it takes the bar's text colour
+	// like the magnifier it replaces. A missing Simple Icons slug falls back
+	// to the magnifier instead of a broken image.
+	const engineIcon = $derived.by(() => {
+		if (!engine?.icon) return null;
+		const resolved = resolveIcon(engine.icon);
+		return resolved?.mono || resolved?.colored || null;
+	});
+	let engineIconFailed = $state(false);
+	$effect(() => {
+		const url = engineIcon;
+		engineIconFailed = false;
+		if (!url || typeof Image === 'undefined') return;
+		const probe = new Image();
+		probe.onerror = () => {
+			if (engineIcon === url) engineIconFailed = true;
+		};
+		probe.src = url;
 	});
 
 	async function fireOneProvider(provider, q, signal, key, filter) {
@@ -806,18 +834,17 @@
 		// The icon is grey so it doesn't pull the eye from the results.
 		if (q) {
 			const fb = [];
-			if (searchConfig?.url) {
-				const param = searchConfig.param || 'q';
-				const url = `${searchConfig.url}${searchConfig.url.includes('?') ? '&' : '?'}${param}=${encodeURIComponent(q)}`;
+			const webUrl = buildSearchUrl(engine, q);
+			if (webUrl) {
 				fb.push({
 					key: 'web',
 					title: `Search the web for “${q}”`,
-					subtitle: searchConfig.name || 'Web',
-					appIcon: searchConfig.icon ? resolveIcon(searchConfig.icon) : undefined,
+					subtitle: engine?.name || 'Web',
+					appIcon: engine?.icon ? resolveIcon(engine.icon) : undefined,
 					iconStyle: 'grayed',
 					svg: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>',
-					url,
-					actions: linkActions('web', url, true)
+					url: webUrl,
+					actions: linkActions('web', webUrl, true)
 				});
 			}
 			if (fb.length) out.push({ id: 'fallbacks', label: 'Use “' + (q.length > 24 ? q.slice(0, 24) + '…' : q) + '” with…', items: fb });
@@ -981,9 +1008,15 @@
 	});
 
 	function handleSubmit(e) {
-		// Enter is handled in the keydown below; a submit only gets here with
-		// nothing to run (no results yet), and then it is a web search.
-		if (!query.trim()) e.preventDefault();
+		// Enter usually runs the selected item (handleInputKeydown); a submit
+		// gets here from the phone keyboard's Go with no result selected, so
+		// it is a web search in the person's chosen engine.
+		e.preventDefault();
+		const q = (query || '').trim();
+		if (!q) return;
+		const url = buildSearchUrl(engine, q);
+		if (url) openUrl(url, true);
+		finish();
 	}
 
 	function handleFocus() {
@@ -1146,13 +1179,17 @@
 	onfocusout={(e) => { if (inlineOpen && e.relatedTarget && !containerEl.contains(e.relatedTarget)) { inlineOpen = false; panelOpen = false; } }}>
 	<form
 		class="hero-search-form relative flex items-center px-4 md:px-6"
-		action={searchConfig.url}
+		action={engine?.url}
 		method="GET"
 		target="_blank"
 		role="search"
 		onsubmit={handleSubmit}
 	>
-		<svg class="text-content-dim shrink-0 w-4 h-4 md:w-5 md:h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+		{#if engineIcon && !engineIconFailed}
+			<span class="search-engine-icon" style={`--engine-icon: url("${engineIcon}")`} aria-hidden="true"></span>
+		{:else}
+			<svg class="text-content-dim shrink-0 w-4 h-4 md:w-5 md:h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+		{/if}
 
 		{#if activeIntegration}
 			<span class="scope-chip flex items-center gap-1 shrink-0 ml-2 text-[0.7rem] font-mono px-2 py-1 rounded-lg border">
@@ -1170,7 +1207,7 @@
 			bind:this={inputEl}
 			bind:value={query}
 			type="text"
-			name={searchConfig.param || 'q'}
+			name={engine?.param || 'q'}
 			class="hero-search-input w-full h-[48px] md:h-[52px] bg-transparent border-none px-3 md:px-4 outline-none font-mono"
 			placeholder={activeFilter ? `Search in ${activeFilter.label}…` : activeIntegration ? `Search in ${activeIntegration.name}…` : placeholderText}
 			autocomplete="off"
@@ -1178,7 +1215,7 @@
 			spellcheck="false"
 			enterkeyhint="go"
 			role="combobox"
-			aria-label="Search apps, files and commands"
+			aria-label={engine ? `Search ${engine.name}, apps, files and commands` : 'Search apps, files and commands'}
 			aria-expanded={isPaletteOpen}
 			aria-controls={listId}
 			aria-autocomplete="list"

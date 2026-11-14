@@ -813,6 +813,48 @@ html[data-glass='solid'] body.theme-light {
 	box-shadow: var(--glass-highlight), 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
+/* General → Search engine: a native select and the custom engine's fields,
+   on the same glass track as the segmented controls. */
+.engine-select,
+.engine-input {
+	width: 100%;
+	box-sizing: border-box;
+	font-family: inherit;
+	font-size: 0.78rem;
+	color: var(--text);
+	background: var(--input-bg);
+	border: 1px solid var(--glass-border);
+	border-radius: 10px;
+	padding: 0.5rem 0.7rem;
+	outline: none;
+	transition: border-color 0.15s, background 0.15s;
+}
+.engine-select { cursor: pointer; }
+.engine-select:focus,
+.engine-input:focus { border-color: var(--text-dim); }
+.engine-input::placeholder { color: var(--text-dim); }
+.engine-fields { display: flex; flex-direction: column; gap: 0.6rem; }
+.engine-field { display: flex; flex-direction: column; gap: 0.25rem; }
+.engine-field > span {
+	font-size: 0.65rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.14em;
+	color: var(--text-dim);
+}
+.engine-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+@media (max-width: 639px) {
+	.engine-field-row { grid-template-columns: 1fr; }
+}
+.engine-param {
+	font-family: var(--font-mono);
+	font-size: 0.68rem;
+	padding: 0.05rem 0.3rem;
+	border-radius: 4px;
+	background: var(--input-bg);
+	border: 1px solid var(--glass-border);
+}
+
 /* Karakeep's dashboard-icon is a white-only glyph, invisible on the white
    default tile; flip it to black wherever that tile is white. */
 body:not(.theme-dark) :is(.app-icon-wrap, .app-tile-icon) img[src$="/di/karakeep.svg"] { filter: invert(1); }
@@ -1387,6 +1429,24 @@ body.search-active .launcher-host { z-index: 40; }
 }
 .hero-search-form input::placeholder { color: var(--hero-search-text-dim); }
 .hero-search-form svg { color: var(--hero-search-text-dim); }
+
+/* The chosen web engine's mark, before the input. A mask instead of an img,
+   so it takes the bar's text colour (and themes) like the magnifier. */
+.search-engine-icon {
+	display: inline-block;
+	flex: none;
+	width: 1rem;
+	height: 1rem;
+	background-color: var(--hero-search-text-dim);
+	-webkit-mask: var(--engine-icon) center / contain no-repeat;
+	mask: var(--engine-icon) center / contain no-repeat;
+}
+@media (min-width: 768px) {
+	.search-engine-icon {
+		width: 1.25rem;
+		height: 1.25rem;
+	}
+}
 .hero-search-form kbd {
 	background: var(--hero-search-chip-bg);
 	border-color: var(--hero-search-chip-border);
