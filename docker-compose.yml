@@ -1,6 +1,7 @@
 services:
   holm:
-    image: ghcr.io/man15h/holm:latest
+    image: ghcr.io/ahmedpateldev/holm:latest
+    # Upstream image: ghcr.io/man15h/holm:latest
     # build: .                    # build from this checkout instead
     ports:
       - "3000:3000"
