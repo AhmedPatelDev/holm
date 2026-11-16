@@ -103,6 +103,9 @@
 	});
 
 	const cardSize = $derived(CARD_SIZES.includes($prefs.cardSize) ? $prefs.cardSize : DEFAULT_CARD_SIZE);
+	const containerWidth = $derived(
+		['standard', 'wide', 'full'].includes($prefs.containerWidth) ? $prefs.containerWidth : 'wide'
+	);
 	const iconStyle = $derived($prefs.iconStyle || 'colored');
 	const openInNewTab = $derived($prefs.openInNewTab ?? false);
 
@@ -663,7 +666,7 @@
 						</div>
 					{/if}
 				</div>
-				<div class="card-grid size-{cardSize}">
+				<div class="card-grid size-{cardSize} width-{containerWidth}">
 					{#each group.items as app (app.id)}
 						{@const size = portalSizeOf(app)}
 						{@const healthEntry = healthLine(app, health[app.id], healthNow)}
@@ -687,8 +690,8 @@
 								onclick={(e) => onPortalClick(e, app)}
 								oncontextmenu={editMode ? undefined : (e) => showContext(app, e)}
 							>
-								<span class="dash-icon" style={iconStyle === 'colored' ? getBrandBgStyle(app.icon) : ''}>
-									<AppIcon icon={app.icon} name={app.name} size="w-6 h-6" {iconStyle} />
+								<span class="dash-icon" style={iconStyle === 'colored' && size !== 'medium' ? getBrandBgStyle(app.icon) : ''}>
+									<AppIcon icon={app.icon} name={app.name} size={size === 'medium' ? 'w-7 h-7' : 'w-6 h-6'} {iconStyle} />
 									{#if healthEntry}
 										<span class="health-dot health-{healthEntry.tone}" aria-hidden="true"></span>
 									{/if}
@@ -773,7 +776,7 @@
 				{#if group.items.length === 0}
 					<div class="category-empty">Drop a bookmark here</div>
 				{:else}
-					<div class="card-grid size-{cardSize}">
+					<div class="card-grid size-{cardSize} width-{containerWidth}">
 						{#each group.items as bookmark (bookmark.id)}
 							{@const size = sizeOf(bookmark)}
 							<div
@@ -801,8 +804,8 @@
 										recordOpen(`app:bookmark-${bookmark.id}`);
 									}}
 								>
-									<span class="dash-icon" style={iconStyle === 'colored' ? getBrandBgStyle(bookmarkIcon(bookmark)) : ''}>
-										<AppIcon icon={bookmarkIcon(bookmark)} name={bookmark.title} size="w-6 h-6" {iconStyle} />
+									<span class="dash-icon" style={iconStyle === 'colored' && size !== 'medium' ? getBrandBgStyle(bookmarkIcon(bookmark)) : ''}>
+										<AppIcon icon={bookmarkIcon(bookmark)} name={bookmark.title} size={size === 'medium' ? 'w-7 h-7' : 'w-6 h-6'} {iconStyle} />
 									</span>
 									<span class="dash-text">
 										<span class="dash-title">{bookmark.title}</span>
@@ -1113,7 +1116,36 @@
 		grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
 	}
 	.card-grid.size-medium {
-		grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+		grid-template-columns: 1fr;
+	}
+	@media (min-width: 640px) {
+		.card-grid.size-medium {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+	}
+	@media (min-width: 768px) {
+		.card-grid.size-medium.width-wide,
+		.card-grid.size-medium.width-full {
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+		}
+	}
+	@media (min-width: 1024px) {
+		.card-grid.size-medium {
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+		}
+		.card-grid.size-medium.width-full {
+			grid-template-columns: repeat(4, minmax(0, 1fr));
+		}
+	}
+	@media (min-width: 1280px) {
+		.card-grid.size-medium.width-wide {
+			grid-template-columns: repeat(4, minmax(0, 1fr));
+		}
+	}
+	@media (min-width: 1536px) {
+		.card-grid.size-medium.width-full {
+			grid-template-columns: repeat(5, minmax(0, 1fr));
+		}
 	}
 	.card-grid.size-wide {
 		grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
@@ -1157,6 +1189,23 @@
 	}
 	.dash-card.health-faded {
 		opacity: 0.55;
+	}
+	/* Medium cards keep the horizontal shape but give the text more room: a
+	   direct 28px icon, tighter padding and a two-line description. */
+	.dash-card.card-medium {
+		gap: 0.75rem;
+		padding: 0.75rem 0.875rem;
+		min-height: 76px;
+	}
+	.dash-card.card-medium .dash-icon {
+		width: 30px;
+		height: 30px;
+		border-radius: 0;
+		background: transparent;
+	}
+	.dash-card.card-medium .dash-icon :global(img) {
+		max-width: 30px;
+		max-height: 30px;
 	}
 	.dash-card.card-compact {
 		flex-direction: column;
@@ -1227,6 +1276,17 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+	}
+	/* Medium cards trade a little density for readability: descriptions and
+	   subtitles wrap to two lines at text-xs/leading-snug. */
+	.dash-card.card-medium .dash-sub {
+		display: -webkit-box;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 2;
+		line-clamp: 2;
+		font-size: 0.75rem;
+		line-height: 1.35;
+		white-space: normal;
 	}
 	/* Configured descriptions wrap instead of scrolling off the card; clamp
 	   them so every row keeps the same height. */
