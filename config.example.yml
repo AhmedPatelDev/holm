@@ -64,8 +64,10 @@ customization:
 # default (":ro"); change it to ":rw" to enable saving. When the file is
 # read-only the tab still opens, explains why, and disables Save.
 #
-# A save writes config.yml.bak first, then a temp file and rename (falling
-# back to an in-place write on bind mounts), then reloads without a restart.
+# A save writes a backup to the data directory (config.yml.bak beside
+# holm.db), then overwrites config.yml directly and reloads without a restart.
+# It writes no temp file and does no rename in /app: a single-file Docker bind
+# mount is writable as a file even when its root-owned folder is not.
 # The visual editor rewrites the whole file and drops comments; use Raw YAML
 # to keep comments and formatting.
 

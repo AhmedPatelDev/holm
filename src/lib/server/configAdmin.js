@@ -1,25 +1,27 @@
 // Read and replace config.yml from Configure → Config.
 //
 // Saving is deliberately conservative: validate first, write a rolling
-// config.yml.bak, write a sibling temp file, rename it over the target, and
-// only then reload the in-memory config. A bind-mounted file can refuse the
-// rename (EBUSY/EPERM); there we fall back to an in-place write, still after
-// the backup. If the new file somehow fails the loader's checks, the previous
-// content is restored so a bad UI save can't take the server down.
+// config.yml.bak, overwrite config.yml, and only then reload the in-memory
+// config. The backup lives next to holm.db on the writable data volume, never
+// beside config.yml: in Docker config.yml is a single-file bind mount inside a
+// root-owned /app, where creating a file or renaming over it fails with EACCES
+// or EBUSY. Writing the file's contents directly works on that mount. If the
+// new file somehow fails the loader's checks, the previous content is restored
+// so a bad UI save can't take the server down.
 
 import {
 	accessSync,
 	constants,
 	existsSync,
+	mkdirSync,
 	readFileSync,
-	renameSync,
 	statSync,
-	unlinkSync,
 	writeFileSync
 } from 'fs';
-import { basename, dirname, join, resolve } from 'path';
+import { dirname, join, resolve } from 'path';
 import { flattenApps, parseConfigText, topLevelLine } from '../adminConfig.js';
 import { getConfigPath, reloadConfig } from './config.js';
+import { resolveDbPath } from './db.js';
 import { substituteEnvVars } from './envVars.js';
 import { searchOnFocusError } from '../searchOnFocus.js';
 import { searchLookError } from '../searchLook.js';
@@ -33,10 +35,18 @@ const READ_ONLY_HINT = (path) =>
 
 const WRITE_FAILED_HINT = (path, err) =>
 	`Could not write config.yml at ${path} (${err?.code || err?.message || 'write failed'}). ` +
-	'Check that the file and its folder are writable by the Holm container.';
+	'Check that the file is writable by the Holm container.';
 
 export function resolveConfigPath() {
 	return resolve(getConfigPath());
+}
+
+// The backup belongs on the data volume, alongside holm.db, not in the config
+// directory. Docker's single-file bind mount leaves /app root-owned and
+// read-only even when config.yml itself is writable. Purely a path: the
+// directory is created on save, so a read-only GET can still report it.
+export function resolveBackupPath() {
+	return join(dirname(resolve(resolveDbPath())), 'config.yml.bak');
 }
 
 function canWrite(path) {
@@ -48,8 +58,8 @@ function canWrite(path) {
 	}
 }
 
-function backupInfo(path) {
-	const backupPath = `${path}.bak`;
+function backupInfo() {
+	const backupPath = resolveBackupPath();
 	try {
 		const stat = statSync(backupPath);
 		return {
@@ -78,7 +88,7 @@ export function readAdminConfig() {
 		raw,
 		config: parsed.config,
 		errors: parsed.errors,
-		backup: backupInfo(path)
+		backup: backupInfo()
 	};
 }
 
@@ -95,34 +105,6 @@ function loaderError(config, raw) {
 	if (!invalid) return [];
 	const key = String(invalid).match(/^(search|branding|wallpapers|health|apps)\b/)?.[1];
 	return [{ message: invalid, line: key ? topLevelLine(raw, key) : undefined }];
-}
-
-function writeAtomically(path, text) {
-	const dir = dirname(path);
-	const tmp = join(dir, `.${basename(path)}.${process.pid}.${Date.now()}.tmp`);
-	let fallback = false;
-	try {
-		writeFileSync(tmp, text, 'utf-8');
-		try {
-			renameSync(tmp, path);
-		} catch (err) {
-			// A bind-mounted file, or Windows while another process holds it,
-			// may not allow rename-over. Keep the backup and write in place.
-			if (['EBUSY', 'EPERM', 'EACCES', 'EXDEV', 'EEXIST'].includes(err?.code)) {
-				writeFileSync(path, text, 'utf-8');
-				fallback = true;
-			} else {
-				throw err;
-			}
-		}
-		return { fallback };
-	} finally {
-		try {
-			if (existsSync(tmp)) unlinkSync(tmp);
-		} catch {
-			/* best effort */
-		}
-	}
 }
 
 /**
@@ -169,8 +151,9 @@ export function saveAdminConfig(text) {
 	}
 
 	const old = readFileSync(path, 'utf-8');
-	const backupPath = `${path}.bak`;
+	const backupPath = resolveBackupPath();
 	try {
+		mkdirSync(dirname(backupPath), { recursive: true });
 		writeFileSync(backupPath, old, 'utf-8');
 	} catch (err) {
 		return {
@@ -180,9 +163,11 @@ export function saveAdminConfig(text) {
 		};
 	}
 
-	let wrote;
 	try {
-		wrote = writeAtomically(path, text);
+		// Not a temp file + rename: on a single-file bind mount the config's
+		// directory is not ours to create files in, but the mounted file itself
+		// accepts a straight overwrite.
+		writeFileSync(path, text, 'utf-8');
 	} catch (err) {
 		if (['EACCES', 'EPERM', 'EROFS'].includes(err?.code)) {
 			return { ok: false, status: 403, readOnly: true, error: READ_ONLY_HINT(path) };
@@ -216,8 +201,7 @@ export function saveAdminConfig(text) {
 		raw: text,
 		config: parsed.config,
 		errors: [],
-		backup: backupInfo(path),
-		fallback: wrote.fallback,
+		backup: backupInfo(),
 		reloaded: true
 	};
 }
