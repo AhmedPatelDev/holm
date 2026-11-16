@@ -89,6 +89,12 @@ customization:
 #   default_visible Whether the app is auto-placed on a fresh user's surface. Default true.
 #                   Users can still add/remove from the catalog at any time.
 #   tags            Optional list of strings, shown (up to three) on the app's search result.
+#   service         Optional boolean (default false). Marks a background/infrastructure
+#                   service; services get their own dashboard tab, shown only when the
+#                   user can see at least one.
+#   description     Optional short summary shown under the card title on Portal and
+#                   Services. Long text wraps and clamps so card rows stay aligned; when
+#                   omitted, the app's host is shown instead.
 #   app_store       Optional: { ios, android } links for onboarding.
 #   browser_extension  Optional URL for onboarding.
 #   on_click        What a plain click on the tile does: open (default), getting_started
@@ -109,6 +115,7 @@ apps:
     default_visible: true
     on_click: getting_started
     health: true
+    description: "Your photo library, backed up from your phone."
     tags: ["media", "selfhosted"]
     app_store:
       ios: "https://apps.apple.com/app/immich/id1613945652"
@@ -146,6 +153,7 @@ apps:
     health:
       url: "http://vaultwarden:80/alive"   # Holm asks this itself; 2xx, 3xx, 401, 403, 429 are up
       every: 5m
+    # service: true                       # put infrastructure on the Services tab
     tags: ["security", "selfhosted"]
     app_store:
       ios: "https://apps.apple.com/app/bitwarden/id1137397744"

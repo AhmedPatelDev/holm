@@ -158,6 +158,34 @@ export function groupPortalApps(apps = [], { order = [], overrides = {} } = {}) 
 	return names.map((name) => ({ key: name, name, label: name, items: groups.get(name) }));
 }
 
+/**
+ * Move a category by `delta` among the names shown on one tab, leaving every
+ * other category where it was in `order`. Portal and Services share one saved
+ * category order, so reordering on Services must not shuffle Portal-only
+ * categories (or the reverse). Returns the new full order, or null when the
+ * move is not possible.
+ */
+export function reorderVisibleCategories(order = [], visibleNames = [], name, delta) {
+	const shown = [...visibleNames];
+	const i = shown.indexOf(name);
+	const j = i + delta;
+	if (i < 0 || j < 0 || j >= shown.length) return null;
+	[shown[i], shown[j]] = [shown[j], shown[i]];
+
+	const visible = new Set(visibleNames);
+	const remaining = [...shown];
+	const next = [];
+	for (const current of order) {
+		if (visible.has(current)) next.push(remaining.shift());
+		else next.push(current);
+	}
+	// A category that was never saved keeps its display position at the end.
+	for (const current of remaining) {
+		if (!next.includes(current)) next.push(current);
+	}
+	return next;
+}
+
 /** The server route that resolves and caches a site's favicon. */
 export function faviconUrl(url) {
 	return `/api/favicon?url=${encodeURIComponent(url || '')}`;

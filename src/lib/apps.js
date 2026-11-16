@@ -61,6 +61,8 @@ export function buildAppsFromConfig(appsConfig) {
 		url: item.url,
 		icon: resolveIcon(item.icon, item.icon_mono, item.brandColor, item.brandFg, item.brandExplicit),
 		selfHosted: item.self_hosted || false,
+		service: item.service === true,
+		description: typeof item.description === 'string' ? item.description.trim() : '',
 		default: item.default_visible !== false,
 		ios: item.app_store?.ios || null,
 		android: item.app_store?.android || null,

@@ -22,6 +22,7 @@
 		groupBookmarks,
 		groupPortalApps,
 		portalCategory,
+		reorderVisibleCategories,
 		urlHost
 	} from '$lib/bookmarks.js';
 
@@ -42,17 +43,46 @@
 
 	const siteConfig = getContext('config');
 
+	// ── Apps ────────────────────────────────────────────────────────────────
+	// Portal and Services are two views of the same authorized catalog: apps
+	// with `service: true` go to Services, everything else stays on Portal.
+	const builtApps = $derived(buildAppsFromConfig(siteConfig?.apps));
+	const setupGuides = $derived(builtApps.setupGuides);
+	const serviceApps = $derived(builtApps.apps.filter((app) => app.service));
+	const hasServices = $derived(serviceApps.length > 0);
+	const clickActions = $derived(Object.fromEntries(builtApps.apps.map((a) => [a.id, a.onClick])));
+
+	// Group once, then split each category into the two tabs so they share the
+	// same category order and per-app overrides.
+	const appGroups = $derived(
+		groupPortalApps(builtApps.apps, {
+			order: $prefs.portalCategoryOrder || [],
+			overrides: $prefs.portalAppCategories || {}
+		})
+	);
+	const portalGroups = $derived(
+		appGroups
+			.map((group) => ({ ...group, items: group.items.filter((app) => !app.service) }))
+			.filter((group) => group.items.length)
+	);
+	const serviceGroups = $derived(
+		appGroups
+			.map((group) => ({ ...group, items: group.items.filter((app) => app.service) }))
+			.filter((group) => group.items.length)
+	);
+
 	// ── Tabs ────────────────────────────────────────────────────────────────
 	// General → Default landing tab can pin the page to one tab; otherwise it
-	// opens on whichever tab was last active.
+	// opens on whichever tab was last active. Services only exists while the
+	// user has an authorized service, so a stale saved choice falls back.
+	const availableTabs = $derived(hasServices ? ['bookmarks', 'portal', 'services'] : ['bookmarks', 'portal']);
 	const landingTab = $derived(
-		$prefs.defaultLandingTab === 'bookmarks' || $prefs.defaultLandingTab === 'portal'
-			? $prefs.defaultLandingTab
-			: null
+		availableTabs.includes($prefs.defaultLandingTab) ? $prefs.defaultLandingTab : null
 	);
 	let activeTab = $state('bookmarks');
 
 	function selectTab(tab) {
+		if (!availableTabs.includes(tab)) return;
 		activeTab = tab;
 		prefs.update((p) => ({ ...p, dashboardTab: tab }));
 	}
@@ -69,7 +99,7 @@
 	$effect(() => {
 		if (landingTab) return;
 		const saved = $prefs.dashboardTab;
-		if ((saved === 'bookmarks' || saved === 'portal') && untrack(() => activeTab) !== saved) activeTab = saved;
+		if (availableTabs.includes(saved) && untrack(() => activeTab) !== saved) activeTab = saved;
 	});
 
 	const cardSize = $derived(CARD_SIZES.includes($prefs.cardSize) ? $prefs.cardSize : DEFAULT_CARD_SIZE);
@@ -82,19 +112,6 @@
 	function portalSizeOf(app) {
 		return effectiveCardSize(($prefs.portalCardSizes || {})[app.id], cardSize);
 	}
-
-	// ── Portal ──────────────────────────────────────────────────────────────
-	const builtApps = $derived(buildAppsFromConfig(siteConfig?.apps));
-	const setupGuides = $derived(builtApps.setupGuides);
-	const portalApps = $derived(builtApps.apps);
-	const clickActions = $derived(Object.fromEntries(portalApps.map((a) => [a.id, a.onClick])));
-
-	const portalGroups = $derived(
-		groupPortalApps(portalApps, {
-			order: $prefs.portalCategoryOrder || [],
-			overrides: $prefs.portalAppCategories || {}
-		})
-	);
 
 	// ── Bookmarks ───────────────────────────────────────────────────────────
 	let bookmarks = $state(untrack(() => (Array.isArray(initialBookmarks) ? [...initialBookmarks] : [])));
@@ -113,7 +130,7 @@
 		bookmarkGroups.filter((group) => group.items.length || (editMode && group.name))
 	);
 	const bookmarkApps = $derived(bookmarks.map(bookmarkToApp));
-	const searchApps = $derived([...portalApps, ...bookmarkApps]);
+	const searchApps = $derived([...builtApps.apps, ...bookmarkApps]);
 
 	async function api(path, options = {}) {
 		const res = await fetch(path, {
@@ -384,7 +401,7 @@
 		e.preventDefault();
 		const id = dragPortalId;
 		dragPortalId = null;
-		const app = portalApps.find((a) => a.id === id);
+		const app = builtApps.apps.find((a) => a.id === id);
 		if (!app) return;
 		const fallback = portalCategory(app);
 		const map = { ...($prefs.portalAppCategories || {}) };
@@ -393,12 +410,14 @@
 		prefs.update((p) => ({ ...p, portalAppCategories: map }));
 	}
 
-	function movePortalCategory(name, delta) {
-		const names = portalGroups.map((g) => g.name);
-		const i = names.indexOf(name);
-		const j = i + delta;
-		if (i < 0 || j < 0 || j >= names.length) return;
-		[names[i], names[j]] = [names[j], names[i]];
+	function movePortalCategory(name, delta, groups = portalGroups) {
+		const names = reorderVisibleCategories(
+			appGroups.map((g) => g.name),
+			groups.map((g) => g.name),
+			name,
+			delta
+		);
+		if (!names) return;
 		prefs.update((p) => ({ ...p, portalCategoryOrder: names }));
 	}
 
@@ -477,7 +496,7 @@
 	const healthOn = $derived(siteConfig?.health?.enabled && $prefs.healthDots !== false);
 	$effect(() => {
 		if (!healthOn) health = {};
-		if (!browser || !portalApps.length || !healthOn) return;
+		if (!browser || !builtApps.apps.length || !healthOn) return;
 		loadHealth();
 		const soon = setTimeout(loadHealth, 5000);
 		const timer = setInterval(() => {
@@ -595,6 +614,16 @@
 			class:is-active={activeTab === 'portal'}
 			onclick={() => selectTab('portal')}
 		>Portal</button>
+		{#if hasServices}
+			<button
+				type="button"
+				role="tab"
+				aria-selected={activeTab === 'services'}
+				class="tab-pill"
+				class:is-active={activeTab === 'services'}
+				onclick={() => selectTab('services')}
+			>Services</button>
+		{/if}
 	</div>
 	{#if customizationEnabled && editMode}
 		<button
@@ -610,6 +639,86 @@
 {#if apiError}
 	<div class="dash-error" role="alert">{apiError}</div>
 {/if}
+
+{#snippet appPanel(groups, label, emptyText)}
+	<div class="tab-panel" role="tabpanel" aria-label={label}>
+		{#if groups.length === 0}
+			<div class="empty-state"><p>{emptyText}</p></div>
+		{/if}
+
+		{#each groups as group (group.key)}
+			<section
+				class="category-section"
+				aria-label={group.label}
+				class:is-drop-target={dragPortalId != null}
+				ondragover={portalDragOver}
+				ondrop={(e) => dropPortalOnCategory(e, group.name)}
+			>
+				<div class="category-head">
+					<h2 class="category-title">{group.label}</h2>
+					{#if editMode}
+						<div class="category-actions">
+							<button type="button" class="mini-btn" onclick={() => movePortalCategory(group.name, -1, groups)} title="Move category up" aria-label="Move {group.label} up">↑</button>
+							<button type="button" class="mini-btn" onclick={() => movePortalCategory(group.name, 1, groups)} title="Move category down" aria-label="Move {group.label} down">↓</button>
+						</div>
+					{/if}
+				</div>
+				<div class="card-grid size-{cardSize}">
+					{#each group.items as app (app.id)}
+						{@const size = portalSizeOf(app)}
+						{@const healthEntry = healthLine(app, health[app.id], healthNow)}
+						<div
+							class="card-wrap span-{size}"
+							role="group"
+							aria-label={app.name}
+							class:is-dragging={dragPortalId === app.id}
+							draggable={editMode}
+							ondragstart={(e) => beginPortalDrag(e, app)}
+							ondragend={endPortalDrag}
+						>
+							<a
+								class="dash-card card-{size}"
+								class:health-faded={health[app.id]?.state === 'down'}
+								href={editMode ? undefined : app.url}
+								target={editMode ? undefined : openInNewTab ? '_blank' : undefined}
+								rel={editMode ? undefined : openInNewTab ? 'noopener noreferrer' : undefined}
+								title={healthEntry ? undefined : app.name}
+								aria-label={healthLabel(app, health[app.id])}
+								onclick={(e) => onPortalClick(e, app)}
+								oncontextmenu={editMode ? undefined : (e) => showContext(app, e)}
+							>
+								<span class="dash-icon" style={iconStyle === 'colored' ? getBrandBgStyle(app.icon) : ''}>
+									<AppIcon icon={app.icon} name={app.name} size="w-6 h-6" {iconStyle} />
+									{#if healthEntry}
+										<span class="health-dot health-{healthEntry.tone}" aria-hidden="true"></span>
+									{/if}
+								</span>
+								<span class="dash-text">
+									<span class="dash-title">{app.name}</span>
+									{#if size !== 'compact'}
+										<span class="dash-sub" class:is-description={!!app.description}>{app.description || app.subtitle || urlHost(app.url)}</span>
+									{/if}
+								</span>
+							</a>
+							{#if editMode}
+								<div class="card-controls">
+									<button
+										type="button"
+										class="card-btn size-btn"
+										title="Cycle card size"
+										aria-label="Card size for {app.name}: {portalSizeLabel(app)}"
+										onclick={() => cyclePortalSize(app)}
+										onpointerdown={(e) => e.stopPropagation()}
+									>{portalSizeLabel(app)}</button>
+								</div>
+							{/if}
+						</div>
+					{/each}
+				</div>
+			</section>
+		{/each}
+	</div>
+{/snippet}
 
 {#if activeTab === 'bookmarks'}
 	<div class="tab-panel" role="tabpanel" aria-label="Bookmarks">
@@ -743,84 +852,10 @@
 			</div>
 		{/if}
 	</div>
+{:else if activeTab === 'portal'}
+	{@render appPanel(portalGroups, 'Portal', 'No apps are configured for your account.')}
 {:else}
-	<div class="tab-panel" role="tabpanel" aria-label="Portal">
-		{#if portalGroups.length === 0}
-			<div class="empty-state"><p>No apps are configured for your account.</p></div>
-		{/if}
-
-		{#each portalGroups as group (group.key)}
-			<section
-				class="category-section"
-				aria-label={group.label}
-				class:is-drop-target={dragPortalId != null}
-				ondragover={portalDragOver}
-				ondrop={(e) => dropPortalOnCategory(e, group.name)}
-			>
-				<div class="category-head">
-					<h2 class="category-title">{group.label}</h2>
-					{#if editMode}
-						<div class="category-actions">
-							<button type="button" class="mini-btn" onclick={() => movePortalCategory(group.name, -1)} title="Move category up" aria-label="Move {group.label} up">↑</button>
-							<button type="button" class="mini-btn" onclick={() => movePortalCategory(group.name, 1)} title="Move category down" aria-label="Move {group.label} down">↓</button>
-						</div>
-					{/if}
-				</div>
-				<div class="card-grid size-{cardSize}">
-					{#each group.items as app (app.id)}
-						{@const size = portalSizeOf(app)}
-						{@const healthEntry = healthLine(app, health[app.id], healthNow)}
-						<div
-							class="card-wrap span-{size}"
-							role="group"
-							aria-label={app.name}
-							class:is-dragging={dragPortalId === app.id}
-							draggable={editMode}
-							ondragstart={(e) => beginPortalDrag(e, app)}
-							ondragend={endPortalDrag}
-						>
-							<a
-								class="dash-card card-{size}"
-								class:health-faded={health[app.id]?.state === 'down'}
-								href={editMode ? undefined : app.url}
-								target={editMode ? undefined : openInNewTab ? '_blank' : undefined}
-								rel={editMode ? undefined : openInNewTab ? 'noopener noreferrer' : undefined}
-								title={healthEntry ? undefined : app.name}
-								aria-label={healthLabel(app, health[app.id])}
-								onclick={(e) => onPortalClick(e, app)}
-								oncontextmenu={editMode ? undefined : (e) => showContext(app, e)}
-							>
-								<span class="dash-icon" style={iconStyle === 'colored' ? getBrandBgStyle(app.icon) : ''}>
-									<AppIcon icon={app.icon} name={app.name} size="w-6 h-6" {iconStyle} />
-									{#if healthEntry}
-										<span class="health-dot health-{healthEntry.tone}" aria-hidden="true"></span>
-									{/if}
-								</span>
-								<span class="dash-text">
-									<span class="dash-title">{app.name}</span>
-									{#if size !== 'compact'}
-										<span class="dash-sub">{app.subtitle || urlHost(app.url)}</span>
-									{/if}
-								</span>
-							</a>
-							{#if editMode}
-								<div class="card-controls">
-									<button
-										type="button"
-										class="card-btn size-btn"
-										title="Cycle card size"
-										aria-label="Card size for {app.name}: {portalSizeLabel(app)}"
-										onclick={() => cyclePortalSize(app)}
-										onpointerdown={(e) => e.stopPropagation()}
-									>{portalSizeLabel(app)}</button>
-								</div>
-							{/if}
-						</div>
-					{/each}
-				</div>
-			</section>
-		{/each}
-	</div>
+	{@render appPanel(serviceGroups, 'Services', 'No services are configured for your account.')}
 {/if}
 
 {#if customizationEnabled}
@@ -1192,6 +1227,19 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+	}
+	/* Configured descriptions wrap instead of scrolling off the card; clamp
+	   them so every row keeps the same height. */
+	.dash-sub.is-description {
+		display: -webkit-box;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 1;
+		line-clamp: 1;
+		white-space: normal;
+	}
+	.dash-card.card-wide .dash-sub.is-description {
+		-webkit-line-clamp: 2;
+		line-clamp: 2;
 	}
 	.dash-card.card-wide .dash-title {
 		font-size: 0.83rem;

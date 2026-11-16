@@ -10,12 +10,13 @@
 - Uses the fork image in [`docker-compose.yml`](docker-compose.yml).
 - Replaces upstream's release workflow with a simple image publisher.
 - Uses cross-platform npm scripts, so `npm run build` works on Windows too.
-- Adds a two-tab dashboard: personal **Bookmarks** and a group-filtered **Portal**.
+- Adds a dashboard with personal **Bookmarks** plus **Portal** and **Services** tabs. Portal and Services share group filtering, category grouping, card sizing, edit-mode reordering and unified search; Services holds items marked `service: true` and only appears when the signed-in user can see at least one.
+- App items accept optional `service` (boolean, default false) and `description` (string). Configured descriptions render under the card title on Portal and Services, clamped to keep rows aligned, and fall back to the app's host when omitted.
 - Bookmarks support add/edit/delete, reordering, categories and card sizes, stored per user in SQLite with automatic favicons.
 - Card density (compact/medium/wide) is configurable globally in Configure and per item.
 - The dashboard runs wide by default (Layout width: Standard, Wide or Full in Configure → Appearance) with the clock, unified search and weather on one top row.
 - Edit mode has an accent-coloured **Done** button and exits with `Esc`. "Open apps in new tab" lives under Configure → General and defaults to off for new users.
-- A **General** tab in Configure holds behaviour settings: the default landing tab (Bookmarks, Portal or Last Active — Last Active keeps the old behaviour and is the default) and Open apps in new tab.
+- A **General** tab in Configure holds behaviour settings: the default landing tab (Bookmarks, Portal, Services when you can see one, or Last Active — Last Active keeps the old behaviour and is the default) and Open apps in new tab.
 - A per-user **Search engine** under Configure → General with presets for Google, DuckDuckGo, Brave Search, Startpage, Kagi and a custom SearXNG-compatible URL. Unset falls back to the server's `search:` entry in `config.yml`; the top bar's icon, placeholder and web submission all follow the chosen engine.
 - Adds five built-in dark themes — Obsidian, Amethyst, OLED Velvet, Tokyo Night and Emerald Noir — alongside Dynamic, Dark and Light, each persisted per user.
 - Optional particle background (Constellation, Floating Dust, Starfield) powered by tsParticles, tinted from the active theme and persisted per user. An **Interactive** switch lets particles follow the pointer (grab, bubble or repulse) and react to clicks without blocking the dashboard.

@@ -8,6 +8,21 @@ import { buildAppsFromConfig, clickAction, clickActionWarnings } from '../src/li
 const guide = { steps: [{ label: 'Download', desc: 'Get the app.' }] };
 const stores = { ios: 'https://apps.apple.com/app/x', android: 'https://play.google.com/x' };
 
+test('service and description map from config with clean defaults', () => {
+	const { apps } = buildAppsFromConfig([
+		{ id: 'backup', name: 'Backup', url: 'https://backup.example.com', icon: 'di:proxmox', service: true, description: '  Nightly snapshots  ' },
+		{ id: 'photos', name: 'Photos', url: 'https://photos.example.com', icon: 'di:immich', service: 'yes', description: 42 },
+		{ id: 'plain', name: 'Plain', url: 'https://plain.example.com', icon: 'di:example' }
+	]);
+	assert.equal(apps[0].service, true);
+	assert.equal(apps[0].description, 'Nightly snapshots');
+	// Only a real boolean marks a service; other values stay false.
+	assert.equal(apps[1].service, false);
+	assert.equal(apps[1].description, '');
+	assert.equal(apps[2].service, false);
+	assert.equal(apps[2].description, '');
+});
+
 test('unset or open opens the app', () => {
 	assert.equal(clickAction({ id: 'a' }), 'open');
 	assert.equal(clickAction({ id: 'a', on_click: 'open', setup_guide: guide }), 'open');

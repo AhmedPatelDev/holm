@@ -29,6 +29,11 @@
 	const integrationsEnabled = siteConfig?.integrations?.enabled !== false;
 	const { apps: catalogApps } = buildAppsFromConfig(siteConfig?.apps);
 	const defaultAppIds = catalogApps.filter((a) => a.default !== false).map((a) => a.id);
+	// Services is only offered as a landing tab when the user can see one.
+	const hasServices = catalogApps.some((app) => app.service);
+	function landingPref(value) {
+		return value === 'services' && !hasServices ? 'last' : value || 'last';
+	}
 
 	let { open = $bindable(false) } = $props();
 
@@ -39,7 +44,7 @@
 	let wallpaperEnabled = $state($prefs.wallpaperEnabled !== false);
 	let wallpaperId = $state($prefs.wallpaperId || null);
 	let openInNewTab = $state($prefs.openInNewTab ?? false);
-	let defaultLandingTab = $state($prefs.defaultLandingTab || 'last');
+	let defaultLandingTab = $state(landingPref($prefs.defaultLandingTab));
 	let searchEngine = $state($prefs.searchEngine || 'default');
 	let searchEngineUrl = $state($prefs.searchEngineUrl || '');
 	let searchEngineParam = $state($prefs.searchEngineParam || 'q');
@@ -65,7 +70,7 @@
 		wallpaperEnabled = $prefs.wallpaperEnabled !== false;
 		wallpaperId = $prefs.wallpaperId || null;
 		openInNewTab = $prefs.openInNewTab ?? false;
-		defaultLandingTab = $prefs.defaultLandingTab || 'last';
+		defaultLandingTab = landingPref($prefs.defaultLandingTab);
 		searchEngine = $prefs.searchEngine || 'default';
 		searchEngineUrl = $prefs.searchEngineUrl || '';
 		searchEngineParam = $prefs.searchEngineParam || 'q';
@@ -310,6 +315,7 @@
 	const landingTabs = [
 		{ id: 'bookmarks', label: 'Bookmarks' },
 		{ id: 'portal', label: 'Portal' },
+		...(hasServices ? [{ id: 'services', label: 'Services' }] : []),
 		{ id: 'last', label: 'Last Active' }
 	];
 

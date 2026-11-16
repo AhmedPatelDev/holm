@@ -14,6 +14,7 @@ import {
 	groupPortalApps,
 	normalizeUrl,
 	portalCategory,
+	reorderVisibleCategories,
 	urlHost,
 	validateBookmark
 } from '../src/lib/bookmarks.js';
@@ -104,6 +105,17 @@ test('groupPortalApps follows the saved order and leaves General last', () => {
 	];
 	const groups = groupPortalApps(apps, { order: ['Family', 'Media'] });
 	assert.deepEqual(groups.map((g) => g.name), ['Family', 'Media', 'General']);
+});
+
+test('reorderVisibleCategories keeps hidden tab categories in place', () => {
+	const order = ['Media', 'Backups', 'Family', 'General'];
+	// Services shows Backups and General; Portal keeps Media and Family.
+	assert.deepEqual(
+		reorderVisibleCategories(order, ['Backups', 'General'], 'General', -1),
+		['Media', 'General', 'Family', 'Backups']
+	);
+	assert.equal(reorderVisibleCategories(order, ['Backups'], 'Backups', -1), null);
+	assert.equal(reorderVisibleCategories(order, ['Backups'], 'Media', 1), null);
 });
 
 test('effectiveCardSize honours an item override, then the global setting', () => {
