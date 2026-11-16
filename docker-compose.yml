@@ -14,7 +14,7 @@ services:
       # - OIDC_CLIENT_ID=
       # - OIDC_CLIENT_SECRET=
     volumes:
-      - ./config.yml:/app/config.yml:ro
+      - ./config.yml:/app/config.yml:ro    # :ro by default; change to :rw to save from Configure → Config
       - holm-data:/app/data
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000"]

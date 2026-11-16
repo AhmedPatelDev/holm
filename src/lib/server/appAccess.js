@@ -9,6 +9,18 @@
 
 let warnedAdminOnly = false;
 
+// The OIDC group that unlocks Configure → Config (the config.yml editor).
+// A fixed name, not a setting: the editor can rewrite this file, so it must
+// not be possible to grant access from inside the file it edits.
+export const ADMIN_GROUP = 'admins';
+
+// Whether this request may read or write config.yml from the UI. Server code
+// checks this on every admin route; the client only gets `admin.enabled` so
+// it can hide the tab.
+export function isAdmin(user) {
+	return Array.isArray(user?.groups) && user.groups.includes(ADMIN_GROUP);
+}
+
 // Whether `user` is in at least one of `groups`; no groups lets everyone in.
 // The same rule gates the changelog dialog, onboarding and the privacy notice.
 export function inGroups(groups, user) {

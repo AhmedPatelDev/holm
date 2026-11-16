@@ -17,6 +17,7 @@
 - The dashboard runs wide by default (Layout width: Standard, Wide or Full in Configure → Appearance) with the clock, unified search and weather on one top row.
 - Edit mode has an accent-coloured **Done** button and exits with `Esc`. "Open apps in new tab" lives under Configure → General and defaults to off for new users.
 - A **General** tab in Configure holds behaviour settings: the default landing tab (Bookmarks, Portal, Services when you can see one, or Last Active — Last Active keeps the old behaviour and is the default) and Open apps in new tab.
+- An admin-only **Config** tab in Configure for editing `config.yml` from the browser. Users whose OIDC groups include `admins` get a visual app manager (search, add/edit/delete, reorder, icons, groups, tags, Portal/Service) and a raw YAML editor with live validation and line-numbered errors. Saves are validated, backed up to `config.yml.bak`, written atomically, and reloaded without a restart. Every read and write is checked server-side; everyone else gets `403` from `/api/admin/config`.
 - A per-user **Search engine** under Configure → General with presets for Google, DuckDuckGo, Brave Search, Startpage, Kagi and a custom SearXNG-compatible URL. Unset falls back to the server's `search:` entry in `config.yml`; the top bar's icon, placeholder and web submission all follow the chosen engine.
 - Adds five built-in dark themes — Obsidian, Amethyst, OLED Velvet, Tokyo Night and Emerald Noir — alongside Dynamic, Dark and Light, each persisted per user.
 - Optional particle background (Constellation, Floating Dust, Starfield) powered by tsParticles, tinted from the active theme and persisted per user. An **Interactive** switch lets particles follow the pointer (grab, bubble or repulse) and react to clicks without blocking the dashboard.
@@ -51,7 +52,7 @@ services:
       # - OIDC_CLIENT_ID=
       # - OIDC_CLIENT_SECRET=
     volumes:
-      - ./config.yml:/app/config.yml:ro
+      - ./config.yml:/app/config.yml:ro    # change to :rw to save from Configure → Config
       - holm-data:/app/data
     restart: unless-stopped
 
@@ -64,6 +65,8 @@ Copy [`config.minimal.yml`](config.minimal.yml) to `config.yml`, edit the apps, 
 ```bash
 docker compose up -d
 ```
+
+The config mount is read-only by default. To edit `config.yml` from Configure → Config in the browser, change `:ro` to `:rw` and recreate the container; without that the editor opens, explains the file is read-only and disables Save. Saving writes `config.yml.bak` first and reloads the server config without a restart.
 
 The minimal config has no sign-in: everyone who can reach the port shares one Guest page. Keep it on your own network. For per-person pages, groups and OIDC, use the `auth:` block from upstream's [`config.example.yml`](https://github.com/man15h/holm/blob/main/config.example.yml) and the [configuration docs](https://github.com/man15h/holm/blob/main/docs/configuration.md).
 

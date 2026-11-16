@@ -4,10 +4,19 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { canSeeApp, inGroups, sectionsFor } from '../src/lib/server/appAccess.js';
+import { ADMIN_GROUP, canSeeApp, inGroups, isAdmin, sectionsFor } from '../src/lib/server/appAccess.js';
 
 const alice = { username: 'alice', groups: ['family'] };
 const bob = { username: 'bob', groups: ['arr', 'admins'] };
+
+test('isAdmin: only the fixed admins group, and only when signed in', () => {
+	assert.equal(ADMIN_GROUP, 'admins');
+	assert.equal(isAdmin(bob), true);
+	assert.equal(isAdmin(alice), false);
+	assert.equal(isAdmin(null), false);
+	assert.equal(isAdmin({ username: 'guest', groups: [] }), false);
+	assert.equal(isAdmin({ username: 'x', groups: ['Admins'] }), false);
+});
 
 test('an app without groups is visible to everyone, signed in or not', () => {
 	assert.equal(canSeeApp({ id: 'photos' }, alice), true);

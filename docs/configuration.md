@@ -208,6 +208,19 @@ Holm fetches `di:` / `si:` icons from their CDNs and serves them itself, so visi
 
 Direct URLs also work: `"https://cdn.example.com/icon.svg"`.
 
+## Admin config editor
+
+Users whose OIDC groups include `admins` get a **Config** tab in Configure. It reads and writes the live `config.yml` (`CONFIG_PATH`) from the browser, so day-to-day app changes don't need an SSH session and a text editor.
+
+- **Who.** The group name `admins` is fixed in code, not a setting: the editor can rewrite this file, so access must not be grantable from inside it. The check runs on the server for every `GET` and `PUT` to `/api/admin/config`; everyone else gets `403`, whether or not the tab is visible. With auth off there are no groups, so nobody is an admin.
+- **Visual editor.** A searchable list of `apps:` with icon preview, name, id, category (`tags[0]`), groups and a Portal/Service badge. Add, edit, delete (with confirmation) and reorder with the up/down buttons. The item form covers id, name, URL, icon (live preview), description, `service`, `self_hosted`, `default_visible`, groups, ordered tags, `app_store` links and `browser_extension`. A new app's id is slugified from its name until you edit it. Unknown app fields (`health`, `on_click`, `setup_guide`, …) are preserved, and server defaults such as `search.url` are editable here too.
+- **Raw YAML.** The file exactly as on disk, with line numbers. Validation runs as you type and again before saving: YAML syntax, plus `id`, `name` and `url` on every app, duplicate ids, field types and the usual `search`/`branding`/`wallpapers`/`health` checks. Errors name the line and jump to it on click.
+- **Saving.** A save validates first, writes `config.yml.bak`, writes a sibling temp file and renames it over the target (falling back to an in-place write on a bind-mounted file), then reloads the in-memory config. Changes apply without a restart; the page refreshes so the dashboard shows them. If the loader rejects the new file anyway, the previous content is restored.
+- **Writable file.** The editor can open a read-only `config.yml` but disables Save and says why. In Docker the volume is mounted `:ro` by default; change it to `:rw` and recreate the container. The file and its folder must be writable by the user Holm runs as.
+- **Comments.** The visual editor serializes the whole file with `js-yaml`, so comments and formatting are lost. Edit in **Raw YAML** to keep them.
+
+The tab appears even when `customization.enabled` is `false`; in that case an admin sees only Config, while everyone else still has no Configure panel.
+
 ## Onboarding
 
 Onboarding shows only with `auth.enabled: true`. Without `slides`, it plays `welcome` then `services`.
@@ -294,7 +307,7 @@ Set `default_url` for every integration you enable: it pins the server URL for e
 
 After an update, each user gets a **What's new in vX.Y.Z** dialog the first time they open Holm, with that release's notes from `CHANGELOG.md` (bundled at build time; Holm never asks GitHub). Once closed, it stays closed until the next version. Someone who skipped versions sees every release since the one they last closed it on, and someone signed in who used Holm before 0.6.0 (which added the dialog) sees every release since 0.5.0; a brand-new user doesn't get it at all. Signed-in users' last version is kept on the server, so it follows them across devices. With auth off, everyone is the shared guest, so each browser keeps its own in `localStorage` instead (and so does every user when the database is off).
 
-`changelog: { enabled: false }` turns the dialog off for everyone, and `changelog: { groups: ["admins"] }` shows it only to those groups. The version still shows at the bottom of Configure as "Holm vX.Y.Z", whatever `branding.name` is, and links to Holm on GitHub. Configure, and with it the version and the update notice, needs `customization.enabled: true`.
+`changelog: { enabled: false }` turns the dialog off for everyone, and `changelog: { groups: ["admins"] }` shows it only to those groups. The version still shows at the bottom of Configure as "Holm vX.Y.Z", whatever `branding.name` is, and links to Holm on GitHub. Configure, and with it the version and the update notice, needs `customization.enabled: true`; members of the `admins` group also get Configure for the [Config editor](#admin-config-editor) when customization is off.
 
 ### Groups for onboarding, privacy and What's new
 
@@ -434,7 +447,7 @@ Every key Holm reads. "Reload" means a save takes effect without a restart.
 | `auth.registration.enabled` / `url` | bool / URL | `false` | yes | A "Register" link on the sign-in screen, when both are set |
 | `database.enabled` | bool | `true` | restart | `false` = preferences in each browser only, integrations off |
 | `database.path` | path | `./data/holm.db` | restart | `DATABASE_PATH` wins |
-| `customization.enabled` | bool | `false` | yes | Without it there is no Configure panel and the grid is fixed |
+| `customization.enabled` | bool | `false` | yes | Without it there is no user-facing Configure panel and the grid is fixed; `admins` still get the [Config editor](#admin-config-editor) |
 | `apps[]` | list | `[]` | yes | Fields under [Apps](#apps): `id`, `name`, `url`, `icon`, `icon_mono`, `tile_color`, `self_hosted`, `default_visible`, `on_click`, `groups`, `tags` (shown on search results), `app_store`, `browser_extension`, `setup_guide`, `health` ([App health](#app-health)) |
 | `health.source` / `url` / `api_key` / `every` / `page` | | none; `every` `60s` | yes | Where tile health comes from: `kener`, `uptime_kuma`, `gatus`, `cachet` or `http`. Any bad value, or an app with both `monitor` and `url`, is rejected like bad YAML. See [App health](#app-health) |
 | `search.enabled` / `url` / `param` / `name` / `icon` | | on, Google, `q` when the block is missing | yes | The fallback web search. A `search:` block needs `enabled: true` |

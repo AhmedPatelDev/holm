@@ -36,6 +36,10 @@
 	const siteConfig = getContext('config');
 	const authEnabled = siteConfig?.auth?.enabled ?? false;
 	const customizationEnabled = siteConfig?.customization?.enabled ?? false;
+	// The Config tab is for the fixed "admins" group. An admin can open
+	// Configure even when customization is off; everyone else still can't.
+	const adminEnabled = siteConfig?.admin?.enabled === true;
+	const configureEnabled = customizationEnabled || adminEnabled;
 	const onboardingEnabled = siteConfig?.onboarding?.enabled ?? false;
 	const wallpapersEnabled = siteConfig?.wallpapers?.enabled ?? false;
 	const weatherConfigEnabled = siteConfig?.weather?.enabled ?? false;
@@ -275,8 +279,8 @@
 	{#if privacyEnabled}
 		<PrivacyTerms bind:open={privacyOpen} standalone />
 	{/if}
-	<SettingsButton bind:open={menuOpen} onmanageapps={customizationEnabled ? () => manageAppsOpen = true : null} showAuth={authEnabled} />
-	{#if customizationEnabled}
+	<SettingsButton bind:open={menuOpen} onmanageapps={configureEnabled ? () => manageAppsOpen = true : null} showAuth={authEnabled} />
+	{#if configureEnabled}
 		<ManageApps bind:open={manageAppsOpen} />
 	{/if}
 	<InstallPrompt devMode={data.devMode} ready={onboarded && !passwordGate} />

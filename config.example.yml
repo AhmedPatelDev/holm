@@ -54,6 +54,21 @@ database:
 customization:
   enabled: true
 
+# ── Admin config editor ─────────────────────────────────────
+# Users whose OIDC groups include exactly "admins" get a Config tab in
+# Configure to view, edit and save this file from the browser, in a visual
+# app manager or as raw YAML. The group name is fixed in code and cannot be
+# changed here. Every /api/admin/config request is checked server-side.
+#
+# Saving needs a writable file. The Docker Compose mount is read-only by
+# default (":ro"); change it to ":rw" to enable saving. When the file is
+# read-only the tab still opens, explains why, and disables Save.
+#
+# A save writes config.yml.bak first, then a temp file and rename (falling
+# back to an in-place write on bind mounts), then reloads without a restart.
+# The visual editor rewrites the whole file and drops comments; use Raw YAML
+# to keep comments and formatting.
+
 # ── Health ──────────────────────────────────────────────────
 # A dot on an app's tile when it's down (red, and the tile fades), slow or
 # under maintenance (amber), or can't be checked (grey ring). Up shows nothing.

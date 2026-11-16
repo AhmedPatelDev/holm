@@ -4,7 +4,7 @@ import yaml from 'js-yaml';
 import { marked } from 'marked';
 import { version as APP_VERSION } from '../../../package.json';
 import { getBrandColor } from './brandColors.js';
-import { canSeeApp, canSeeSection, sectionsFor } from './appAccess.js';
+import { canSeeApp, canSeeSection, isAdmin, sectionsFor } from './appAccess.js';
 import { latestRelease, updateFor } from './updateCheck.js';
 import { substituteEnvVars } from './envVars.js';
 import { searchOnFocusError } from '../searchOnFocus.js';
@@ -70,6 +70,21 @@ function getDefaults() {
 }
 
 export function getConfig() {
+	return loadConfig();
+}
+
+// The file the running server reads. Kept as one function so the admin editor
+// and the loader can never disagree about which config.yml is live.
+export function getConfigPath() {
+	return configPath;
+}
+
+// Drop the cached config and load it again. The Configure → Config editor
+// calls this after a save so the next request sees the new file without a
+// restart; watchFile would otherwise leave the old object in place until it
+// noticed the mtime change.
+export function reloadConfig() {
+	_config = null;
 	return loadConfig();
 }
 
@@ -197,7 +212,8 @@ export async function getClientConfig({ authenticated = true, user = null } = {}
 			branding: getBranding(),
 			auth,
 			privacy: { ...privacy, html: await loadPrivacyHtml(privacy) },
-			wallpapers: clientWallpapers(config)
+			wallpapers: clientWallpapers(config),
+			admin: { enabled: false }
 		};
 	}
 
@@ -205,6 +221,9 @@ export async function getClientConfig({ authenticated = true, user = null } = {}
 	return {
 		branding: getBranding(),
 		auth: { ...auth, password_change_url: config.auth?.password_change_url || null },
+		// The Config tab is server-side guarded; this only decides whether to
+		// draw it. `user` comes from the signed session or the dev override.
+		admin: { enabled: isAdmin(user) },
 		// How an app is checked stays on the server; /api/health has the answers.
 		apps: visibleApps.map(({ health, ...app }) => app),
 		// Whether any of them has a check, so Configure offers the switch.

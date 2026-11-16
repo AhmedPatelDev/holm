@@ -16,6 +16,7 @@
 	import { SEARCH_TRANSPARENCY, SEARCH_HINTS, searchTransparency, searchHints } from '$lib/searchLook.js';
 	import { SEARCH_ENGINES, effectiveSearchEngine } from '$lib/searchEngine.js';
 	import { DEFAULT_CARD_SIZE } from '$lib/bookmarks.js';
+	import ConfigManager from '$lib/components/ConfigManager.svelte';
 
 	const siteConfig = getContext('config');
 	const version = siteConfig?.version || '';
@@ -27,7 +28,13 @@
 	const REPO_URL = __HOLM_REPO_URL__;
 	// Off when database.enabled is false: credentials would have nowhere to live.
 	const integrationsEnabled = siteConfig?.integrations?.enabled !== false;
+	// The user-facing settings (General, Appearance, Widgets) need the
+	// customization switch. The Config tab is separate: it is for the fixed
+	// "admins" OIDC group and works even when customization is off.
+	const customizationEnabled = siteConfig?.customization?.enabled === true;
+	const adminEnabled = siteConfig?.admin?.enabled === true;
 	const { apps: catalogApps } = buildAppsFromConfig(siteConfig?.apps);
+
 	const defaultAppIds = catalogApps.filter((a) => a.default !== false).map((a) => a.id);
 	// Services is only offered as a landing tab when the user can see one.
 	const hasServices = catalogApps.some((app) => app.service);
@@ -87,7 +94,7 @@
 	}
 	$effect(() => {
 		if (open && !prevOpen) {
-			activeTab = 'appearance';
+			activeTab = firstTab;
 			loadFromPrefs();
 		}
 		prevOpen = open;
@@ -341,6 +348,26 @@
 		{ id: 'dust', label: 'Floating Dust' },
 		{ id: 'starfield', label: 'Starfield' }
 	];
+
+	// One list for both the desktop sidebar and the mobile tab strip. Config
+	// is last and only appears for admins; the user tabs need customization.
+	const tabs = $derived([
+		...(customizationEnabled
+			? [
+					{ id: 'general', label: 'General', svg: '<path d="M4 21v-7"/><path d="M4 10V3"/><path d="M12 21v-9"/><path d="M12 8V3"/><path d="M20 21v-5"/><path d="M20 12V3"/><path d="M1 14h6"/><path d="M9 8h6"/><path d="M17 16h6"/>' },
+					{ id: 'appearance', label: 'Appearance', svg: '<circle cx="12" cy="12" r="3"/><path d="M12 1v2m0 18v-2M4.22 4.22l1.42 1.42m12.72 12.72-1.42-1.42M1 12h2m18 0h-2M4.22 19.78l1.42-1.42M18.36 5.64l-1.42 1.42"/>' },
+					{ id: 'widgets', label: 'Widgets', svg: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>' },
+					...(integrationsEnabled
+						? [{ id: 'integrations', label: 'Integrations', svg: '<path d="M9 2v6"/><path d="M15 2v6"/><path d="M12 17v5"/><path d="M5 8h14a2 2 0 0 1 2 2v3a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5v-3a2 2 0 0 1 2-2z"/>' }]
+						: [])
+				]
+			: []),
+		...(adminEnabled
+			? [{ id: 'config', label: 'Config', svg: '<path d="M4 7h16M4 12h16M4 17h16"/><circle cx="8" cy="7" r="2" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="2" fill="currentColor" stroke="none"/><circle cx="10" cy="17" r="2" fill="currentColor" stroke="none"/>' }]
+			: [])
+	]);
+	const firstTab = customizationEnabled ? 'appearance' : adminEnabled ? 'config' : 'general';
+
 </script>
 
 {#snippet versionLinks()}
@@ -371,12 +398,7 @@
 
 			<!-- Mobile: horizontal tabs -->
 			<div class="hidden max-md:flex shrink-0 px-3 pt-2 pb-1 gap-1 border-b border-border-card overflow-x-auto items-center">
-				{#each [
-					{ id: 'general', label: 'General' },
-					{ id: 'appearance', label: 'Appearance' },
-					{ id: 'widgets', label: 'Widgets' },
-					{ id: 'integrations', label: 'Integrations' }
-				].filter((t) => t.id !== 'integrations' || integrationsEnabled) as tab}
+				{#each tabs as tab (tab.id)}
 					<button
 						class="flex-1 min-w-fit px-2.5 py-2.5 rounded-lg border-none cursor-pointer text-center text-[0.75rem] font-medium transition-all duration-150 {activeTab === tab.id ? 'bg-surface-card-strong text-content' : 'bg-transparent text-content-dim'}"
 						onclick={() => selectTab(tab.id)}
@@ -389,12 +411,7 @@
 				<!-- Sidebar — hidden on mobile -->
 				<div class="w-[160px] shrink-0 px-2.5 pt-3 pb-3 flex flex-col max-md:hidden">
 					<div class="flex flex-col gap-0.5">
-						{#each [
-							{ id: 'general', label: 'General', svg: '<path d="M4 21v-7"/><path d="M4 10V3"/><path d="M12 21v-9"/><path d="M12 8V3"/><path d="M20 21v-5"/><path d="M20 12V3"/><path d="M1 14h6"/><path d="M9 8h6"/><path d="M17 16h6"/>' },
-							{ id: 'appearance', label: 'Appearance', svg: '<circle cx="12" cy="12" r="3"/><path d="M12 1v2m0 18v-2M4.22 4.22l1.42 1.42m12.72 12.72-1.42-1.42M1 12h2m18 0h-2M4.22 19.78l1.42-1.42M18.36 5.64l-1.42 1.42"/>' },
-							{ id: 'widgets', label: 'Widgets', svg: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>' },
-							{ id: 'integrations', label: 'Integrations', svg: '<path d="M9 2v6"/><path d="M15 2v6"/><path d="M12 17v5"/><path d="M5 8h14a2 2 0 0 1 2 2v3a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5v-3a2 2 0 0 1 2-2z"/>' }
-						].filter((t) => t.id !== 'integrations' || integrationsEnabled) as tab}
+						{#each tabs as tab (tab.id)}
 							<button
 								class="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg border-none cursor-pointer transition-all duration-150 text-left {activeTab === tab.id ? 'bg-surface-card-strong' : 'bg-transparent hover:bg-surface-card-hover'}"
 								onclick={() => selectTab(tab.id)}
@@ -405,16 +422,18 @@
 						{/each}
 					</div>
 					<div class="mt-auto pt-3">
-						{#if resetUndo}
-							<button
-								class="text-[0.7rem] text-content bg-transparent border-none cursor-pointer underline underline-offset-2 font-mono px-3"
-								onclick={undoResetDefaults}
-							>Undo reset</button>
-						{:else}
-							<button
-								class="text-[0.7rem] text-content-dim bg-transparent border-none cursor-pointer hover:text-content transition-colors font-mono px-3"
-								onclick={resetDefaults}
-							>Reset defaults</button>
+						{#if customizationEnabled}
+							{#if resetUndo}
+								<button
+									class="text-[0.7rem] text-content bg-transparent border-none cursor-pointer underline underline-offset-2 font-mono px-3"
+									onclick={undoResetDefaults}
+								>Undo reset</button>
+							{:else}
+								<button
+									class="text-[0.7rem] text-content-dim bg-transparent border-none cursor-pointer hover:text-content transition-colors font-mono px-3"
+									onclick={resetDefaults}
+								>Reset defaults</button>
+							{/if}
 						{/if}
 						{#if version}
 							<div class="version-line mt-1.5">{@render versionLinks()}</div>
@@ -829,14 +848,20 @@
 				<!-- ═══ INTEGRATIONS TAB ═══ -->
 				<IntegrationsPanel {iconStyle} />
 
+				{:else if activeTab === 'config'}
+				<!-- ═══ CONFIG TAB (admins) ═══ -->
+				<ConfigManager />
+
 				{/if}
 				<!-- On phones the sidebar is hidden: Reset defaults and the version sit
 				     under the tab, flush with its content. -->
 				<div class="hidden max-md:flex flex-col items-start gap-1.5 mt-6">
-					{#if resetUndo}
-						<button class="text-[0.7rem] text-content bg-transparent border-none cursor-pointer underline underline-offset-2 font-mono p-0" onclick={undoResetDefaults}>Undo reset</button>
-					{:else}
-						<button class="text-[0.7rem] text-content-dim bg-transparent border-none cursor-pointer hover:text-content transition-colors font-mono p-0" onclick={resetDefaults}>Reset defaults</button>
+					{#if customizationEnabled}
+						{#if resetUndo}
+							<button class="text-[0.7rem] text-content bg-transparent border-none cursor-pointer underline underline-offset-2 font-mono p-0" onclick={undoResetDefaults}>Undo reset</button>
+						{:else}
+							<button class="text-[0.7rem] text-content-dim bg-transparent border-none cursor-pointer hover:text-content transition-colors font-mono p-0" onclick={resetDefaults}>Reset defaults</button>
+						{/if}
 					{/if}
 					{#if version}
 						<div class="version-line flush">{@render versionLinks()}</div>
